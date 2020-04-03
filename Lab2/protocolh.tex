@@ -1,0 +1,334 @@
+ \documentclass{article}
+ 
+ \usepackage{fancyhdr}
+ \usepackage{cmap}
+ \usepackage[T2A]{fontenc}
+ \usepackage[utf8]{inputenc}
+ \usepackage[english,russian,ukrainian]{babel}
+ \usepackage{pythontex}
+ \usepackage{indentfirst}
+ \usepackage{graphics}
+ \usepackage{hyperref}
+ \hypersetup{
+ 	colorlinks,
+ 	citecolor=black,
+ 	linkcolor=black,
+ 	filecolor=black,
+ 	urlcolor=black
+ }
+ 
+ \usepackage{geometry}
+ \geometry{
+ 	a4paper,
+ 	total={155mm,247mm},
+ 	left=30mm,
+ 	top=30mm,
+ }
+ \usepackage{titlesec}
+ \usepackage{fancyhdr}
+ 
+ \pagestyle{fancy}
+ \fancyhf{}
+ \renewcommand{\headrulewidth}{0.5pt}
+ \renewcommand{\footrulewidth}{0.5pt}
+ \rhead{\LaTeX}
+ \lhead{Вячеслав Козачок}
+ 
+ %\titleformat{\section}
+ %{\normalfont\Large\bfseries}{\thesection}{1em}{}
+ 
+ %\titleformat*{\subsection}{\large\bfseries}
+ 
+ \begin{document}
+ 	
+	\include{title}
+	\newpage
+	\Large
+	\section*{Завдання до виконання}
+	\large
+	\begin{enumerate}
+	\item Створіть каталог \verb|lab_2.|
+	\item Скопіюйте в каталог \verb|lab_2| файл \verb|/bin/cat| під назвою \verb|my_cat|.
+	\item За допомогою файлу \verb|my_cat|, що знаходиться в каталозі \verb|lab_2|,
+	перегляньте уміст файлу \verb|.profile| (ви знаходитесь у домашньому
+	каталозі).
+	\item Перегляньте список файлів у каталозі \verb|lab_2|. Потім перегляньте
+	список усіх файлів, включаючи приховані, з повною інформацією про
+	файли. Зверніть увагу на права доступу, власника, дату модифікації
+	файлу, що ви тільки-но скопіювали. Потім перегляньте цю інформацію
+	про оригінальний файл (той, який копіювали) і порівняйте два
+	результати.
+	\item Змініть права доступу до файлу \verb|my_cat| так, щоб власник міг тільки
+	читати цей файл.
+	\item Переконайтеся в тому, що ви зробили ці зміни і повторіть п.3.
+	\item Визначте права на файл \verb|my_cat| таким чином, щоб ви могли робити з
+	файлом усе, що завгодно, а всі інші — нічого не могли робити.
+	\item Поверніться в домашній каталог. Змініть права доступу до каталогу
+	\verb|lab_2| так, щоб ви могли його тільки читати.
+	\item Спробуйте переглянути простий список файлів у цьому каталозі.
+	Спробуйте переглянути список файлів з повною інформацією про них.
+	Спробуйте запустити і видалити файл \verb|my_cat| з цього каталогу.
+	\item Поясніть отримані результати. Результати виконання п.8 можуть бути
+	різними в різних версіях UNIX, зокрема, Linux і FreeBSD.
+	Прокоментуйте отримані результати у висновках.
+	\item За допомогою команди \verb|su <user name>|, завантажтесь в систему,
+	користуючись обліковим записом іншого користувача. (Вам потрібно
+	знати пароль цього користувача.) Спробуйте отримати доступ до
+	Вашого каталогу \verb|lab_2| . Перевірте, чи правильно зроблено завдання
+	попереднього пункту. Створіть каталог \verb|lab_2_2|.
+	\item Знову завантажтесь в систему, користуючись своїм обліковим
+	записом. Спробуйте зробити власником каталогу \verb|lab_2| іншого
+	користувача. Спробуйте зробити себе власником каталогу \verb|lab_2_2|.
+	Поясніть результати.	
+	\item . Зайдіть у каталог \verb|lab_2|. Зробіть так, щоб нові створені файли і
+	каталоги діставали права доступу згідно Таблиці. Створіть новий файл
+	і каталог і переконайтеся в правильності ваших установок.
+	
+	\textbf{Варіант 9:} Файли 644, каталоги 744.
+	 
+	 \item Поверніть собі права читати, писати, та переглядати вміст каталогів.
+	 \item Створіть у каталозі \verb|lab_2| каталог \verb|acl_test| та у ньому файли
+	 \verb|file1, file2.profile| Після час створення \verb|file1| додайте у нього
+	 довільний текст.
+	 \item Виведіть \verb|ACL| для \verb|file1|
+	 \item Змінить права доступу на \verb|file1| так, щоб тільки власник мав право
+	 на читання.
+	 \item Увійдіть до системи під іншим обліковим записом та спробуйте
+	 прочитати вміст \verb|file1|. Що отримаємо? Поверніться до свого
+	 облікового запису.
+	 \item За допомогою команди \verb|setfacl| додайте право на читання іншому
+	 обраному користувачу для \verb|file1| Перевірте, що створився новий
+	 ACL для \verb|file1|
+	 \item Увійдіть до системи під іншим обліковим записом та спробуйте
+	 прочитати вміст \verb|file1|. Що отримаємо? Поверніться до свого
+	 облікового запису.
+	 \item За допомогою команди \verb|setfacl| встановіть значення маски таким
+	 чином щоб дозволити читати вміст \verb|file1| іншому користувачу.
+	 Виведіть ACL для \verb|file1|
+	 \item Увійдіть до системи під іншим обліковим записом, та спробуйте
+	 прочитати вміст \verb|file1|. Ви повинні мати таку змогу.
+	 
+	\newpage
+	
+	\Large
+\section*{Хід роботи}
+	
+\end{enumerate}
+	
+\large
+\begin{enumerate}
+	\item \begin{verbatim}
+	[eski@eski-pc Lab2]$ mkdir lab2
+	\end{verbatim}
+	\item \begin{verbatim}
+	[eski@eski-pc lab_2]$ cp /bin/cat my_cat
+	\end{verbatim}
+	\item \begin{verbatim}
+	[eski@eski-pc lab_2]$ ./my_cat ~/.profile 
+	export EDITOR=/usr/bin/nano
+	alias cduni="cd /home/eski/Documents/University/2\ курс/"
+	\end{verbatim}
+	\item \begin{verbatim}
+	[eski@eski-pc lab_2]$ ls
+	my_cat
+	
+	[eski@eski-pc lab_2]$ ls -la
+	total 48
+	drwxr-xr-x 2 eski eski  4096 Feb 20 15:01 .
+	drwxr-xr-x 3 eski eski  4096 Feb 20 16:19 ..
+	-rwxr-xr-x 1 eski eski 39048 Feb 20 15:01 my_cat
+	
+	[eski@eski-pc lab_2]$ ls -la /usr/bin
+	.............
+	lrwxrwxrwx  1 root   root           5 Nov 12 14:52 bzcat -> bzip2
+	-rwxr-xr-x  1 root   root       39048 Nov 12 13:00 cat
+	-rwxr-xr-x  1 root   root        3272 Nov 13 18:16 catchsegv
+	.............
+	\end{verbatim}
+	\item \begin{verbatim}
+	[eski@eski-pc lab_2]$ chmod u=r-- my_cat
+
+	
+	\end{verbatim}
+	\item \begin{verbatim}
+	[eski@eski-pc lab_2]$ ls -l
+	total 40
+	-r--r-xr-x 1 eski eski 39048 Feb 20 15:01 my_cat
+	
+	[eski@eski-pc lab_2]$ ./my_cat ~/.profile
+	bash: ./my_cat: Permission denied
+	
+	\end{verbatim}
+	\item \begin{verbatim}[eski@eski-pc lab_2]$ chmod u=rwx,g=---,o=--- my_cat 
+	[eski@eski-pc lab_2]$ ls -l
+	total 40
+	-rwx------ 1 eski eski 39048 Feb 20 15:01 my_cat
+	
+	\end{verbatim}
+	\item \begin{verbatim}
+	[eski@eski-pc lab_2]$ cd ..
+	[eski@eski-pc Lab2]$ chmod u=r-- lab_2/
+	[eski@eski-pc Lab2]$ ls -l
+	total 256
+	dr--r-xr-x 2 eski eski   4096 Feb 20 17:06 lab_2
+	
+	\end{verbatim}
+	\newpage
+	\item \begin{verbatim}
+	[eski@eski-pc Lab2]$ ls lab_2
+	ls: cannot access 'lab_2/my_cat': Permission denied
+	my_cat
+	
+	[eski@eski-pc Lab2]$ ls -l lab_2
+	ls: cannot access 'lab_2/my_cat': Permission denied
+	total 0
+	-????????? ? ? ? ?            ? my_cat
+	
+	[eski@eski-pc Lab2]$ ./lab_2/my_cat ~/.profile 
+	bash: ./lab_2/my_cat: Permission denied
+	
+	[eski@eski-pc Lab2]$ rm lab_2/my_cat 
+	rm: cannot remove 'lab_2/my_cat': Permission denied
+	
+	\end{verbatim}
+	\item Дивіться висновок(*)
+	\item \begin{verbatim}
+	[eski@eski-pc Lab2]$ su topshop
+	Password: 
+	
+	[topshop@eski-pc Lab2]$ cd lab_2/
+	
+	[topshop@eski-pc lab_2]$ mkdir lab_2_2
+	mkdir: cannot create directory ‘lab_2_2’: Permission denied
+	# Треба додати до lab_2 правно на запис іншим користувачам
+	
+	[topshop@eski-pc lab_2]$ exit
+	
+	[eski@eski-pc Lab2]$ ls -l 
+	total 264
+	dr--r-xr-x 2 eski eski   4096 Feb 20 17:06 lab_2
+	[eski@eski-pc Lab2]$ chmod o+w lab_2/
+	
+	[eski@eski-pc Lab2]$ su topshop
+	Password: 
+	[topshop@eski-pc Lab2]$ cd lab_2/
+	[topshop@eski-pc lab_2]$ mkdir lab_2_2
+	\end{verbatim}
+	\item \begin{verbatim}
+	[eski@eski-pc Lab2]$ chown topshop lab_2
+	chown: changing ownership of 'lab_2': Operation not permitted
+	
+	[eski@eski-pc Lab2]$ chown topshop lab_2/lab_2_2 
+	chown: cannot access 'lab_2/lab_2_2': Permission denied
+	\end{verbatim}
+	\newpage
+	\item \begin{verbatim}
+	[eski@eski-pc lab_2]$ umask 0033
+	
+	[eski@eski-pc lab_2]$ ls -l
+	total 48
+	drwxr--r-- 2 eski    eski     4096 Feb 20 22:53 dir
+	-rw-r--r-- 1 eski    eski        0 Feb 20 22:53 file
+	\end{verbatim}
+	\item \begin{verbatim}
+	[eski@eski-pc Lab2]$ cd lab_2/
+	[eski@eski-pc lab_2]$ chmod u+xw .
+	\end{verbatim}
+	\item \begin{verbatim}
+	[eski@eski-pc lab_2]$ mkdir acl_test
+	[eski@eski-pc lab_2]$ touch acl_test/file1
+	[eski@eski-pc lab_2]$ touch acl_test/file2
+	[eski@eski-pc lab_2]$ echo Some random text >> acl_test/file1
+
+	\end{verbatim}
+	\item \begin{verbatim}
+	[eski@eski-pc lab_2]$ cd acl_test/
+	[eski@eski-pc acl_test]$ getfacl file1
+	# file: file1
+	# owner: eski
+	# group: eski
+	user::rw-
+	group::r--
+	other::r--
+	
+	\end{verbatim}
+	\item \begin{verbatim}
+	setfacl -m m::wx file1
+	\end{verbatim}
+	\item \begin{verbatim}
+	[eski@eski-pc acl_test]$ su topshop 
+	Password: 
+	[topshop@eski-pc acl_test]$ cat file1
+	cat: file1: Permission denied
+	[topshop@eski-pc acl_test]$ exit
+	
+	\end{verbatim}
+	\item \begin{verbatim}
+	[eski@eski-pc acl_test]$ setfacl -m u:topshop:r  file1
+	[eski@eski-pc acl_test]$ getfacl file1
+	# file: file1
+	# owner: eski
+	# group: eski
+	user::rw-
+	user:topshop:r--
+	group::r--
+	mask::r--
+	other::r--
+	
+	\end{verbatim}
+	\item \begin{verbatim}
+	[eski@eski-pc acl_test]$ su topshop
+	Password: 
+	[topshop@eski-pc acl_test]$ cat file1
+	cat: file1: Permission denied
+	[topshop@eski-pc acl_test]$ exit 
+	\end{verbatim}
+	\item \begin{verbatim}
+	[eski@eski-pc acl_test]$ setfacl -m m:r file1
+	[eski@eski-pc acl_test]$ getfacl file1
+	# file: file1
+	# owner: eski
+	# group: eski
+	user::rw-
+	user:topshop:r--
+	group::r--
+	mask::r--
+	other::r--
+	
+	
+	\end{verbatim}
+	\item \begin{verbatim}
+	[eski@eski-pc acl_test]$ su topshop 
+	Password: 
+	[topshop@eski-pc acl_test]$ cat file1
+	Some random text la la la
+	
+	\end{verbatim}
+		
+\end{enumerate}
+	
+\newpage
+\Large
+\section*{Висновок}
+\large
+\textbf{Відповідь на запитання до завдання:} Для каталогів право виконання трактується як право доступу до таблиці індексних дескрипторів на читання і запис, не маючи цього права
+неможливо зробити поточним цей каталог чи будь-який з його підкаталогів,
+неможливо ознайомитись і змінити права доступу до об’єктів цього каталогу,
+можна тільки переглядати його вміст, якщо є право читання. Навіть маючи
+право запису, без права виконання не можна змінити вміст каталогу.
+Навпаки, якщо є право на виконання, але не встановлено право на читання
+для каталогу, то неможливо переглянути вміст каталогу, але можна заходити
+в його підкаталоги чи звертатись до файлів, що містяться в ньому, якщо
+знати їхні імена.
+\\\\
+\indent Таким чином в лабораторній роботі ми навчились задавати права на каталоги та директорії різними способами. 
+\begin{itemize}
+	\item chmod
+	\item setfacl
+\end{itemize}
+Зрозуміли значення прав для директорій, файлів. Призначення групи власника, самого власника, призначення прав для інших користувачів.	
+ \end{document}
+
+
+
+

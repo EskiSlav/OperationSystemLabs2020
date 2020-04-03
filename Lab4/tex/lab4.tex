@@ -1,0 +1,212 @@
+ \documentclass{article}
+
+\usepackage{fancyhdr}
+\usepackage{cmap}
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english,russian,ukrainian]{babel}
+\usepackage{pythontex}
+\usepackage{indentfirst}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\hypersetup{
+	colorlinks,
+	citecolor=black,
+	linkcolor=black,
+	filecolor=black,
+	urlcolor=black
+}
+
+\usepackage{geometry}
+\geometry{
+	a4paper,
+	total={165mm,247mm},
+	left=20mm,
+	top=30mm,
+}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.5pt}
+%\renewcommand{\footrulewidth}{0.1pt}
+\rhead{\LaTeX}
+\lhead{Вячеслав Козачок}
+
+\cfoot{\thepage}
+%\titleformat{\section}
+%{\normalfont\Large\bfseries}{\thesection}{1em}{}
+
+%\titleformat*{\subsection}{\large\bfseries}
+
+ \usepackage{listings}
+ \usepackage{xcolor}
+ 
+ \definecolor{codegreen}{rgb}{0,0.6,0}
+ \definecolor{codegray}{rgb}{0.5,0.5,0.5}
+ \definecolor{codepurple}{rgb}{0.58,0,0.82}
+ \definecolor{backcolour}{rgb}{0.99,0.99,0.99}
+ 
+ 
+ \lstdefinestyle{mystyle}{
+ 	backgroundcolor=\color{backcolour},   
+ 	commentstyle=\color{codegreen},
+ 	keywordstyle=\color{magenta},
+ 	numberstyle=\tiny\color{codegray},
+ 	stringstyle=\color{codepurple},
+ 	basicstyle=\ttfamily\footnotesize,
+ 	breakatwhitespace=false,         
+ 	breaklines=true,                 
+ 	captionpos=b,                    
+ 	keepspaces=true,                 
+ 	numbers=left,                    
+ 	numbersep=5pt,                  
+ 	showspaces=false,                
+ 	showstringspaces=false,
+ 	showtabs=false,                  
+ 	tabsize=4
+ }
+ 
+ \lstset{style=mystyle}
+ 
+ 
+ \begin{document}
+
+ 	\include{title}
+ 	\newpage
+ 	
+ 	\section*{Варіант 3}
+ 	\begin{enumerate} 
+\item Написати сценарій для оболонки bash згідно таких вимог:
+ 	Сценарій приймає 3 параметри командного рядка. Перший параметр —
+ 	ім’я каталогу, в якому (і в підкаталогах якого рекурсивно) треба
+ 	здійснювати пошук. Другий параметр — шаблон пошуку. За
+ 	відсутності двох параметрів сценарій повинен виводити рядок, що
+ 	описує коректний формат виклику сценарію. Третій параметр —
+ 	необов’язковий — це ім’я файлу, що буде створений.
+ 	\item Сценарій шукає у заданому каталозі і його підкаталогах усі файли, які
+ 	містять послідовність байт, що відповідає шаблону пошуку, і формує їх
+ 	список. Список повинен містити ім’я файлу, повний шлях до каталогу,
+ 	тип файлу (див. команду file), розмір файлу у байтах, і рядок, що
+ 	відповідає шаблону.
+ 	\item Якщо третій параметр виклику сценарію (ім’я файлу) був заданий, то
+ 	список має бути виведений у цей файл. Якщо параметр заданий не
+ 	був — на цьому етапі сценарій повинен запросити ввести його. В обох
+ 	випадках якщо такий файл для виводу вже існує, сценарій повинен
+ 	видати запит, що робити далі — переписати вміст файлу, дописати нові
+ 	дані у кінець файлу, або скасувати операцію.
+ 	38Операційні системи – комп’ютерний практикум
+ 	\item Сценарій повинен коректно відпрацьовувати помилки, такі як
+ 	некоректні імена файлів і шаблон пошуку, відсутність заданого
+ 	каталогу, помилки доступу (зокрема, відсутність права доступу до
+ 	певних файлів), відсутність жодних файлів, що відповідають заданому
+ 	шаблону. При цьому сценарій повинен видавати діагностику помилок.
+ \end{enumerate}
+ 	\section*{Робота}
+\begin{lstlisting}[language=BASH]
+#!/bin/bash
+usage="script -d directory -t template -f filename"
+
+checkargs() {
+	if [[ $OPTARG =~ ^-[d,t,f]$ ]]
+	then
+		echo "Unknown argument $OPTARG for option $option"
+		exit 1
+	else
+		echo "lol"
+	fi
+}
+
+directory=
+template=
+filename=
+while getopts "d:t:f:" option 
+do
+	case "$option" in 
+		d) 	checkargs
+		directory=${OPTARG};; 
+		t) 	checkargs 
+		template=${OPTARG};;
+		f) 	checkargs 
+		filename=${OPTARG};;
+	esac
+done
+
+
+if [ -d "$directory" ];
+then 
+	echo "$directory valid"
+else
+	echo "Such directory does not exists."
+	exit 1
+fi 
+
+if [[ $directory == "" || $template == "" ]];
+then
+	echo " [!] Usage: $usage"
+	exit 1
+fi
+
+if [[ $filename == "" ]];
+then
+	read -p "Please enter the name of the file: "
+	filename=$REPLY
+fi
+
+if [[ -f $filename ]];
+then
+	printf "This file: $filename already exists.\n What do you want to do?\n  [1] Rewrite file\n  [2] Append to file\n  [3] exit\n  Choice:"
+	read  
+	if [[ $REPLY == "1" ]];	then
+		rm $filename
+		touch $filename
+	fi
+	
+	if [[ $REPLY == "3" ]]; then
+		exit 1
+	fi
+	touch /tmp/$filename.err
+	touch /tmp/$filename.bin
+fi
+
+printf '\n'
+
+grep -nrwi $directory -e "$template" 2> /tmp/$filename.err > "/tmp/$filename.tmp"
+
+while IFS="" read -r p || [ -n "$p" ]
+do 
+	if [[ "$p" =~ .*"matches"*. ]];
+	then
+		echo "$p" > "/tmp/$filename.bin"
+	fi
+done < /tmp/$filename.tmp 
+
+sed -i -e '/matches/d' /tmp/$filename.tmp
+
+while IFS="" read -r p || [ -n "$p" ]
+do
+	name=$(cut -d: -f1 <<< "$p")
+	text=$(cut -d: -f3 <<< "$p")
+	echo "$(basename "$name"):$(realpath $name):$(file $name | cut -d: -f2):bytes $(wc -c $name | cut -d" " -f1):text $text" >> $filename
+
+done < "/tmp/$filename.tmp"
+
+while IFS="" read -r p || [ -n "$p" ]
+do	
+	name=$(cut -d" " -f3 <<< "$p")
+	echo "$(basename "$name"):$(realpath $name):$(file $name | cut -d: -f2):bytes $(wc -c $name | cut -d" " -f1):binary file" >> $filename
+done < /tmp/$filename.bin
+
+rm "/tmp/$filename.tmp"
+rm "/tmp/$filename.err"
+rm "/tmp/$filename.bin"
+
+\end{lstlisting}
+
+\section*{Висновки}
+\large
+Навчився писати скрипти для bash. Оволодів практичними навичками професійної роботи з
+командною оболонкою shell – використанням змінних і створенням командних файлів.
+
+\end{document}

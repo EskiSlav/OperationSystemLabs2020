@@ -1,0 +1,226 @@
+\documentclass{article}
+
+\usepackage{cmap}
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english,ukrainian,russian]{babel}
+\usepackage{hyperref}
+\usepackage{indentfirst}
+\usepackage{verbatim}
+\usepackage{fancyhdr}
+\usepackage{multirow}
+\usepackage{tabularx}
+\usepackage[absolute]{textpos}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rfoot{Page \thepage}
+\rhead{\LaTeX}
+\lhead{Вячеслав Козачок ФБ-82}
+\renewcommand{\headrulewidth}{1pt}
+\renewcommand{\footrulewidth}{1pt}
+
+\begin{document}
+
+
+	\centering{
+		Міністерство освіти і науки України \\
+		Національний технічний університет України
+		"Київський політехнічний інститут імені Ігоря Сікорського"\\
+		Фізико-технічний інститут
+	}
+	\vspace{4cm}\\
+	\centering{
+	{\LARGE	\textbf{Операційні системи} \\ \vspace{0.15cm}}
+		{\Large Лабораторна №1}
+}
+
+\vspace{7cm}
+\begin{flushright}
+	Виконав: студент групи ФБ-82\\
+	Козачок Вячеслав\\
+	Перевірив: \\
+	Кирієнко О.В.
+\end{flushright}
+\vfill
+	
+\centering{Київ - 2020}
+\newpage
+	\noindent \section*{Номер варіанту: 9}
+	\indent \textbf{Завдання до виконання}
+	\begin{enumerate}
+		\item Завантажтеся в систему під вашим користувацьким ім'ям.
+		\item Поміняйте ваш пароль. Ваш новий пароль повинен включати в себе як
+		частину номер Вашої залікової книжки.
+		\item Виведіть системну дату.
+		\item Підрахуйте кількість рядків у файлі: 
+\verb|/etc/protocols|
+		\item Виведіть на екран вміст відповідного файлу.
+		\item Виведіть календар на <1995+Noваріанту> рік.
+		\item Виведіть календар на 1752 рік. Чи не помічаєте що-небудь цікаве у
+		вересні? Поясніть.
+		\item Визначте, хто ще завантажений у систему.
+		\item Наберіть команду ping. Поясніть результат.
+		\item Скопіюйте (скопіюйте, а не перемістіть, бо система перестане
+		працювати коректно!) файли: \verb|/bin/login та /bin/sh|
+		\item Створіть каталог \verb|lab_1| 
+		\item Скопіюйте в нього з вашого домашнього каталогу копію файлу 1, яку
+		ви отримали в п.10. Перемістіть в
+		цей каталог з вашого домашнього каталогу копію файлу 2, яку ви
+		отримали в п.10
+		\item Перейдіть у свій домашній каталог і переконайтеся в тому, що все
+		зроблено правильно.
+		\item Створіть каталог \verb|lab_1_<необхідна_команда>_<No_варіанту>| і перейдіть в нього.
+		\item Скопіюйте в каталог \verb|lab_1_<необхідна_команда>_<No_варіанту>| файл з п.4 під ім'ям
+		\verb|n<необхідна_команда>ім’я вихідного файлу> |.
+		\item За допомогою команд cat і less перегляньте його вміст.
+		\item Перейдіть у свій домашній каталог.
+		\item Видаліть каталог \verb|lab_1_<необхідна_команда>Noваріанту>|.
+	\end{enumerate}
+\clearpage
+\section*{Виконання роботи}
+\begin{enumerate}
+	\item Login topshop\\Password: **********
+	\item \begin{verbatim}
+	[topshop@eski-pc ~]$ passwd
+	Changing password for topshop.
+	Current password: 
+	New password: 
+	Retype new password: 
+	passwd: password updated successfully
+	\end{verbatim}
+	\item \begin{verbatim}
+	[topshop@eski-pc ~]$ date
+	Fri 14 Feb 2020 01:41:52 AM EET
+	\end{verbatim}
+	\item \begin{verbatim}
+	[topshop@eski-pc \~]\$ wc -l /etc/protocols 
+	137 /etc/protocols
+	\end{verbatim}
+	
+	\item \begin{verbatim}
+	[topshop@eski-pc ~]$ cat /etc/protocols 
+	# Full data: /usr/share/iana-etc/protocol-numbers.iana
+	hopopt         0 HOPOPT
+	icmp           1 ICMP
+	igmp           2 IGMP
+	ggp            3 GGP
+	ipv4           4 IPv4
+	............................
+	wesp         141 WESP
+	rohc         142 ROHC
+	ethernet     143 Ethernet
+	reserved     255 Reserved
+	
+	\end{verbatim}
+	\item \begin{verbatim}
+	[topshop@eski-pc ~]$ cal 2004
+	2004                               
+	
+	January               February                 March       
+	Su Mo Tu We Th Fr Sa   Su Mo Tu We Th Fr Sa   Su Mo Tu We Th Fr Sa
+	1  2  3    1  2  3  4  5  6  7       1  2  3  4  5  6
+	4  5  6  7  8  9 10    8  9 10 11 12 13 14    7  8  9 10 11 12 13
+	11 12 13 14 15 16 17   15 16 17 18 19 20 21   14 15 16 17 18 19 20
+	18 19 20 21 22 23 24   22 23 24 25 26 27 28   21 22 23 24 25 26 27
+	25 26 27 28 29 30 31   29                     28 29 30 31         
+	
+	......................
+	
+	\end{verbatim}
+	\clearpage
+	\item \begin{verbatim}
+	[topshop@eski-pc ~]$ cal 1752
+	1752                               
+	
+	................               
+	July                  August                September     
+	Su Mo Tu We Th Fr Sa   Su Mo Tu We Th Fr Sa   Su Mo Tu We Th Fr Sa
+	1  2  3  4                      1          1  2 14 15 16
+	5  6  7  8  9 10 11    2  3  4  5  6  7  8   17 18 19 20 21 22 23
+	12 13 14 15 16 17 18    9 10 11 12 13 14 15   24 25 26 27 28 29 30
+	19 20 21 22 23 24 25   16 17 18 19 20 21 22                       
+	26 27 28 29 30 31      23 24 25 26 27 28 29                       
+	30 31                                      
+	.................
+	
+	\end{verbatim}
+	\item \begin{verbatim}
+	[topshop@eski-pc eski]$ users
+	topshop eski
+	
+	\end{verbatim}
+	\item \begin{verbatim}
+	[topshop@eski-pc eski]$ ping
+	ping: usage error: Destination address required
+	
+	[topshop@eski-pc eski]$ ping 8.8.8.8
+	PING 8.8.8.8 (8.8.8.8) 56(84) bytes of data.
+	64 bytes from 8.8.8.8: icmp_seq=1 ttl=56 time=16.1 ms
+	64 bytes from 8.8.8.8: icmp_seq=2 ttl=56 time=16.6 ms
+	64 bytes from 8.8.8.8: icmp_seq=3 ttl=56 time=14.7 ms
+	^C
+	--- 8.8.8.8 ping statistics ---
+	3 packets transmitted, 3 received, 0% packet loss, time 2003ms
+	rtt min/avg/max/mdev = 14.724/15.808/16.624/0.798 ms
+	
+	\end{verbatim}
+	\item \begin{verbatim}
+	[topshop@eski-pc ~]$ cp /bin/login .
+	[topshop@eski-pc ~]$ cp /bin/sh .
+	[topshop@eski-pc ~]$ ls -l
+	total 928
+	-rwxr-xr-x 1 topshop topshop  42840 Feb 14 01:53 login
+	-rwxr-xr-x 1 topshop topshop 903440 Feb 14 01:54 sh
+	
+	\end{verbatim}
+	\item \begin{verbatim}
+	[topshop@eski-pc ~]$ mkdir lab_1
+	
+	\end{verbatim}
+	\item \begin{verbatim}
+	[topshop@eski-pc ~]$ cp login lab_1/my_login
+	[topshop@eski-pc ~]$ mv sh lab_1/my_sh
+	
+	\end{verbatim}
+	\item \begin{verbatim}
+	[topshop@eski-pc ~]$ ls
+	lab_1  login
+	[topshop@eski-pc ~]$ ls lab_1/
+	my_login  my_sh
+	
+	\end{verbatim}
+	\item \begin{verbatim}
+	[topshop@eski-pc ~]$ mkdir lab_1_9
+	[topshop@eski-pc ~]$ cd lab_1_9/
+	
+	\end{verbatim}
+	\item \begin{verbatim}
+	[topshop@eski-pc lab_1_9]$ cp /etc/protocols nprotocols
+	
+	\end{verbatim}
+	\item \begin{verbatim}
+	[topshop@eski-pc lab_1_9]$ cat nprotocols 
+	# Full data: /usr/share/iana-etc/protocol-numbers.iana
+	hopopt         0 HOPOPT
+	icmp           1 ICMP
+	igmp           2 IGMP
+	..........
+	 
+	[topshop@eski-pc lab_1_9]$ less nprotocols
+	------FILE-----
+	\end{verbatim}
+	\item \begin{verbatim}
+	[topshop@eski-pc lab_1_9]$ cd ~
+	
+	\end{verbatim}
+	\item \begin{verbatim}
+	[topshop@eski-pc ~]$ rm -rf lab_1_9
+	[topshop@eski-pc ~]$ ls 
+	lab_1  login
+	
+	\end{verbatim}
+\end{enumerate}
+
+
+\end{document}

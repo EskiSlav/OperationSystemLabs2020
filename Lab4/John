@@ -1,0 +1,4 @@
+subdirfile:/home/eski/Documents/University/2 курс/2 semestr/OS/Lab4/dir/subdirfile: ASCII text:bytes 19:text hello world subdir
+file2:/home/eski/Documents/University/2 курс/2 semestr/OS/Lab4/file2: ASCII text:bytes 42:text hello world! My darling queen
+file1:/home/eski/Documents/University/2 курс/2 semestr/OS/Lab4/file1: ASCII text:bytes 25:text hello world!
+meta:/home/eski/Documents/University/2 курс/2 semestr/OS/Lab4/meta: ELF 64-bit LSB executable, x86-64, version 1 (GNU/Linux), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=053c468eab9a2ece79428729eb4e37eee56210e0, not stripped:bytes 19479936:binary file
