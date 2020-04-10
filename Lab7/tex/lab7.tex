@@ -73,6 +73,8 @@
  
 \begin{document}
  \include{title}
+ \tableofcontents
+ \newpage
 \large
 \begin{enumerate}
 	\item \textbf{Створення потоку.} Напишіть програму, що створює потік. Застосуйте
@@ -94,41 +96,120 @@
 \end{enumerate}
 \newpage
 \part*{Хід роботи}
-\section*{Task 1}
+\section{Створення Потоку}
+\subsection{Code}\vspace{-3mm}
 \begin{lstlisting}[language=C]
 #include <stdio.h>
 #include <pthread.h>
-
+#include <unistd.h>
 #define TEXT "Test text"
 
 void * printLines(void * param);
 int main(int argv, char * argc[])
 {
-	pthread_attr_t attr;
-	pthread_t p1;
+    pthread_attr_t attr;
+    pthread_t p1;
 
-	pthread_attr_init(&attr);
-	pthread_create(&p1, &attr, printLines, TEXT);
+    pthread_attr_init(&attr);
+    int * thread_number = (int*)malloc(sizeof(int));
+    *thread_number = 0;
+    pthread_create(&p1, &attr, printLines, (void*)thread_number);
 
-	printf("%s\n", "Parent process:");
-	printLines(TEXT);
-	return 0;
-	
+    printf("%s\n", "Parent process:");
+    for(int i = 0; i < 10; i++)
+        printf("%s\n", TEXT);
+    sleep(1);
+    return 0;
+    
 }
 
-void * printLines(void * param)
+void * printLines(void * number)
 {
-	for(int i = 0; i < 4; i++)
-		printf("%s\n", param);
-	pthread_exit(0);
+    printf("Child process: %d\n", *(int*)number);
+    for(int i = 0; i < 10; i++)
+        printf("%s\n", TEXT);
+    pthread_exit(0);
 }
 \end{lstlisting}
 Компіляцію треба здійснювати з флагом \texttt{-lpthread}, щоб працювала бібліотека \linebreak\texttt{<pthread.h>}. Також
 
-Output:
+\subsection{Output}\vspace{-3mm}
 \begin{lstlisting}[language=BASH]
-gcc -g main.c -o main -lpthread
 ./main 
+Parent process:
+Test text
+Test text
+Test text
+Test text
+Test text
+Test text
+Test text
+Test text
+Test text
+Test text
+Child process: 0
+Test text
+Test text
+Test text
+Test text
+Test text
+Test text
+Test text
+Test text
+Test text
+Test text
+
+\end{lstlisting}
+\newpage
+\section{Очікування потоку}
+\subsection{Code}\vspace{-3mm}
+\begin{lstlisting}[language=C++]
+#include <stdio.h>
+#include <pthread.h>
+#include <unistd.h>
+#define TEXT "Test text"
+
+void * printLines(void * param);
+int main(int argv, char * argc[])
+{
+    pthread_attr_t attr;
+    pthread_t p1;
+
+    pthread_attr_init(&attr);
+    int * thread_number = (int*)malloc(sizeof(int));
+    *thread_number = 0;
+    pthread_create(&p1, &attr, printLines, (void*)thread_number);
+
+    pthread_join(p1, NULL);
+    
+    printf("%s\n", "Parent process:");
+    for(int i = 0; i < 10; i++)
+        printf("%s\n", TEXT);
+
+    return 0;
+    
+}
+
+void * printLines(void * number)
+{
+    printf("Child process: %d\n", *(int*)number);
+    for(int i = 0; i < 10; i++)
+        printf("%s\n", TEXT);
+    pthread_exit(0);
+}
+\end{lstlisting}
+
+\subsection{Output}\vspace{-3mm}
+
+\begin{lstlisting}[language=BASH]
+./main 
+Child process: 0
+Test text
+Test text
+Test text
+Test text
+Test text
+Test text
 Test text
 Test text
 Test text
@@ -138,9 +219,199 @@ Test text
 Test text
 Test text
 Test text
+Test text
+Test text
+Test text
+Test text
+Test text
+Test text
 \end{lstlisting}
 
+\newpage
+\section{Параметри потоку}
+\subsection{Code}\vspace{-3mm}
+\begin{lstlisting}[language=C++]
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <unistd.h>
 
+void * printLines(void * param);
+int main(int argv, char * argc[])
+{
+    pthread_t threads[4];
+
+    char ** text = (char**)malloc(3*sizeof(char*));
+    text[0] = "thread"; 
+    text[1] = "first"; 
+    text[2] = "Heh Ipsum";
+    pthread_create(&(threads[0]), NULL, printLines, (void*)text);
+
+    text = (char**)malloc(3*sizeof(char*));
+    text[0] = "thread"; 
+    text[1] = "Second"; 
+    text[2] = "Avadacedavra Lorem";
+    pthread_create(&(threads[1]), NULL, printLines, (void*)text);
+
+    text = (char**)malloc(3*sizeof(char*));
+    text[0] = "thread"; 
+    text[1] = "third"; 
+    text[2] = "Realy SOme ";
+    pthread_create(&(threads[2]), NULL, printLines, (void*)text);
+
+    text = (char**)malloc(3*sizeof(char*));
+    text[0] = "thread"; 
+    text[1] = "fourth"; 
+    text[2] = "PrintLines function";
+    pthread_create(&(threads[3]), NULL, printLines, (void*)text);
+
+    printf("%s\n", "Parent process here!");
+    
+    pthread_join(threads[0], NULL);
+    return 0;
+    
+}
+
+void * printLines(void * text)
+{
+    printf("Child process: %c", '\n');
+    for(int i = 0; i < 3; i++)
+        printf("%s\n", ((char**)text)[i]);
+    pthread_exit(0);
+}
+\end{lstlisting}
+
+\subsection{Output}\vspace{-3mm}
 \begin{lstlisting}[language=BASH]
+./main 
+Child process: 
+Child process: 
+thread
+Second
+Avadacedavra Lorem
+Child process: 
+thread
+third
+Child process: 
+thread
+fourth
+PrintLines function
+Parent process here!
+Realy SOme 
+thread
+first
+Heh Ipsum
+
 \end{lstlisting}
+
+
+\newpage
+\section{Примусове завершення потоку}
+\subsection{Code}\vspace{-3mm}
+\begin{lstlisting}[language=C++]
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <unistd.h>
+
+void * printLines(void * param);
+int main(int argv, char * argc[])
+{
+    pthread_t thread;
+
+    char ** text = (char**)malloc(3*sizeof(char*));
+    text[0] = "thread"; 
+    text[1] = "first"; 
+    text[2] = "Heh Ipsum";
+    pthread_create(&thread, NULL, printLines, (void*)text);
+    sleep(1);
+
+    pthread_cancel(thread);
+    printf("Child process canceled\n");
+    return 0;
+}
+
+void * printLines(void * text)
+{
+    sleep(2);
+    printf("Child process: %c", '\n');
+    for(int i = 0; i < 3; i++)
+        printf("%s\n", ((char**)text)[i]);
+    pthread_exit(0);
+}
+\end{lstlisting}
+
+\subsection{Output}\vspace{-3mm}
+\begin{lstlisting}[language=BASH]
+./main 
+Child process canceled
+\end{lstlisting}
+
+\newpage
+
+\section{Обробка завершення потоку}
+\subsection{Code}\vspace{-3mm}
+\begin{lstlisting}[language=C++]
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <unistd.h>
+
+
+static int cleanup_pop_arg = 0;
+
+void * printLines(void * param);
+int main(int argv, char * argc[])
+{
+    pthread_t thread;
+
+    char ** text = (char**)malloc(3*sizeof(char*));
+    text[0] = "thread"; 
+    text[1] = "first"; 
+    text[2] = "Heh Ipsum";
+    pthread_create(&thread, NULL, printLines, (void*)text);
+   
+    pthread_cancel(thread);
+    printf("Child process canceled\n");
+    sleep(1);
+    return 0;
+}
+
+static void onCancel(void * arg)
+{
+    printf("Child process says that it was canceled by someone =(;\n");
+}
+
+void * printLines(void * text)
+{
+    pthread_cleanup_push(onCancel, NULL);
+    int done = 0;
+    int i = 0;
+    while(!done)
+    {
+        
+        pthread_testcancel();
+        
+        printf("%s\n", ((char**)text)[i]);
+        i++;
+        if(i == 3)
+            done = 1;
+        sleep(1);
+    }
+    pthread_cleanup_pop(cleanup_pop_arg);
+}
+
+\end{lstlisting}
+
+\subsection{Output}\vspace{-3mm}
+\begin{lstlisting}[language=BASH]
+./main 
+thread
+Child process canceled
+Child process says that it was canceled by someone =(;
+\end{lstlisting}
+
+
+\section{Висновки}
+В цій лабораторній роботі я отримав базові навички роботи з потоками, такі як створення потоку, примусове завершення потоку, обробка примусового завершення потоку, очікування завершення потоку, передача потоку додаткових параметрів.
 \end{document}

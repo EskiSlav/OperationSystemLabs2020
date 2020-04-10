@@ -1,6 +1,0 @@
-Hello world
-I need to print
-some text
-selling goods
-buying goods
-producing somesthing
