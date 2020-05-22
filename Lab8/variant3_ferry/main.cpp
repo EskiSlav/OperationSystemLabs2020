@@ -104,7 +104,10 @@ void cancel_threads()
 void * thread_work(void * param)
 {
     thread_info * info = (thread_info*)param;
-    sleep(rand() % 3 + 1);
+    if (info->name == "Paratrooper")
+        sleep(rand() % 3 + 1);
+    else
+        sleep(rand() % 3 + 2);
         
     get_on_board(info);
     get_out_of_board(info);

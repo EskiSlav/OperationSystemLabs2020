@@ -1,0 +1,1210 @@
+\documentclass{article}
+
+\usepackage{fancyhdr}
+\usepackage{cmap}
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english,russian,ukrainian]{babel}
+\usepackage{indentfirst}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{geometry}
+
+\hypersetup{
+	colorlinks,
+	citecolor=black,
+	linkcolor=black,
+	filecolor=black,
+	urlcolor=black
+}
+
+\geometry{
+	a4paper,
+	total={165mm,247mm},
+	left=20mm,
+	top=30mm,
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.5pt}
+%\renewcommand{\footrulewidth}{0.1pt}
+\rhead{\LaTeX}
+\lhead{Вячеслав Козачок}
+
+\cfoot{\thepage}
+%\titleformat{\section}
+%{\normalfont\Large\bfseries}{\thesection}{1em}{}
+
+%\titleformat*{\subsection}{\large\bfseries}
+
+ \usepackage{listings}
+ \usepackage{xcolor}
+ 
+ \definecolor{codegreen}{rgb}{0,0.6,0}
+ \definecolor{codegray}{rgb}{0.5,0.5,0.5}
+ \definecolor{codepurple}{rgb}{0.58,0,0.82}
+ \definecolor{backcolour}{rgb}{0.99,0.99,0.99}
+ \definecolor{codeblue}{rgb}{0.1,0.1,0.99}
+ 
+ \lstdefinestyle{mystyle}{
+ 	backgroundcolor=\color{backcolour},   
+ 	commentstyle=\color{codegreen},
+ 	keywordstyle=\color{codeblue},
+ 	numberstyle=\tiny\color{codegray},
+ 	stringstyle=\color{codepurple},
+ 	basicstyle=\ttfamily\footnotesize,
+ 	breakatwhitespace=false,         
+ 	breaklines=true,                 
+ 	captionpos=b,                    
+ 	keepspaces=true,                 
+ 	numbers=left,                    
+ 	numbersep=5pt,                  
+ 	showspaces=false,                
+ 	showstringspaces=false,
+ 	showtabs=false,                  
+ 	tabsize=4
+ }
+ 
+ \lstset{style=mystyle}
+ 
+ 
+\begin{document}
+ \include{title}
+
+\newpage 
+
+\large
+\section{Варіант 9}
+Батьківський процес поміщає в сегмент поділюваної пам'яті імена
+програм з попередніх лабораторних робіт, які можуть бути запущені.
+Виконуючи деякі цикли робіт, породжені процеси випадковим чином
+обирають імена програм з таблиці сегмента поділюваної пам'яті, запускають
+ці програми, і продовжують свою роботу. За допомогою апарату семафорів
+має бути забезпечено, щоб не були одночасно запущені дві однакові
+програми. В процесі роботи через чергу повідомлень батьківський процес
+інформується, які програми і від імені кого запущені.
+
+\section{Project directory}
+\begin{verbatim}
+-exe
+  |--ferry
+  |--processes
+  |--threading
+-geeks
+  |--geeksRead.cpp
+  |--geeksWrite.cpp
+  |--gread.o
+  |--Makefile
+-main.cpp
+-main.o
+-Makefile
+-test.cpp
+-test.o
+
+\end{verbatim}
+
+\section{Programs that were launched}
+\begin{verbatim}
+-exe
+|--ferry
+|--processes
+|--threading
+\end{verbatim}
+\newpage
+\section{Code}
+\begin{lstlisting}[language=C++]
+#include <sys/types.h>
+#include <semaphore.h>
+#include <sys/wait.h>
+#include <sys/ipc.h>
+#include <sys/shm.h> 
+#include <sys/msg.h>
+#include <pthread.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <time.h>
+#include <list>
+
+#define PROG_COUNT 3
+#define LOOPS_FOR_SUBPROCESS 3
+#define MSGSZ 2048
+
+typedef struct message{
+    long mtype;
+    char mtext[MSGSZ];
+} message;
+
+sem_t * sem_progs;
+char ** shared;
+char name[] = "MAIN";
+int msgid;
+
+int get_sem_value(sem_t sem);
+int create_shared_programm_list();
+int shared_semaphores_init();
+int create_message_queue();
+int send_message(char * text);
+void receive_messages();
+void* thread_work(void * param);
+void* check_semaphore(void * param);
+
+int main()
+{
+    printf("%15s: state\n%13s\n", "Process name", "---------------------------");
+    printf("%15s: Starting\n", name);
+    printf("%15s: PID: %d\n", name, getpid());
+    
+    pid_t pID = 1;
+    std::list<pid_t> pids;
+    char * sIdentifier;
+    
+    srand(time(0));
+    create_shared_programm_list();
+    shared_semaphores_init();
+    create_message_queue();
+
+
+    for(int i = 0; i < 2 && pID > 0; i++)
+    {
+        sleep(1);
+        pID = fork();
+        if(pID > 0)
+            pids.push_back(pID);
+    }
+    
+    if (pID == 0)
+    {
+        srand(time(0));
+        for(int i = 0; i < LOOPS_FOR_SUBPROCESS; i++)
+        {
+            pthread_t thread1;
+            pthread_create(&thread1, NULL, thread_work, NULL);
+            pthread_join(thread1, NULL);
+        }
+        
+    }
+    else if (pID < 0)
+    {
+        printf("Failed to fork\n");
+        _exit(1);
+        // Throw exception
+    }
+    else
+    {
+        // Code only executed by parent process
+        for(auto iter : pids)
+        wait(&iter);
+        receive_messages();
+    }
+
+
+    return 0;
+}
+
+int get_sem_value(sem_t sem)
+{
+    int value;
+    sem_getvalue(&sem_progs[2], &value);
+    return value;
+}
+
+int create_message_queue()
+{
+    int key = ftok("/tmp/", 32);
+    msgid = msgget(key, 0666|IPC_CREAT);
+    printf("%15s: Created message queue:\n", name);
+    printf("%15s Queue id = %d\n", "-", msgid);
+    printf("%15s Key = %d\n", "-", key);
+
+    return 1;
+}
+
+int create_shared_programm_list()
+{
+    int key = ftok("/tmp/", 8);
+    int shmid = shmget(key, 1024, 0666|IPC_CREAT);
+    if(shmid < 0)
+        return -1;
+    shared = (char**) shmat(shmid, (void*)0, 0);
+    shared = new char*[PROG_COUNT];
+    for(int i = 0; i < PROG_COUNT; i++)
+        shared[i] = new char[20];
+    strcpy(shared[0], "./exe/threading");
+    strcpy(shared[1], "./exe/processes");
+    strcpy(shared[2], "./exe/ferry");
+
+    printf("%15s: Created shared programm list:\n", name);
+    printf("%15s Key = %d\n", "-", key);
+    for(int i = 0; i < PROG_COUNT; i++)
+        printf("%15s %s\n", "-", shared[i]);
+
+    return 1;
+}
+
+int shared_semaphores_init()
+{
+    int key = ftok("/tmp/", 97);
+    int shmid = shmget(key, 1024, 0666|IPC_CREAT);
+    if(shmid < 0)
+        return -1;
+
+    sem_progs = (sem_t*) shmat(shmid, (void*)0, 0);
+    for(int i = 0; i < PROG_COUNT; i++)
+        sem_init(&sem_progs[i],0,1);
+    
+    printf("%15s: Created semaphores for all programms\n", name);
+    printf("%15s Key = %d\n", "-", key);
+    for(int i = 0; i < PROG_COUNT; i++)
+        printf("%15s Semaphore %d ('%15s'). Value:%d\n", "-", i, shared[i], get_sem_value(sem_progs[i]));
+
+    return 1;
+}
+
+char* itoa(int i)
+{
+    char * buffer = new char[10];
+    sprintf(buffer, "%d", i);
+    return buffer;
+}
+
+int send_message(char * text)
+{  
+    char part[] = "Executing: ";
+    char * pid = itoa(getpid());
+    int bufsize;
+    char * newtext = new char[strlen(text) + strlen(part) + strlen(" PID: ") + strlen(pid) + 1];
+    strcpy(newtext, part);
+    strcat(newtext, text);
+    strcat(newtext, " PID: ");
+    strcat(newtext, itoa(getpid()));
+    printf("NewText: %s\n", newtext);
+    message msg;
+    msg.mtype = 1;
+    strcpy(msg.mtext, newtext);
+    bufsize = strlen(newtext) + 10;
+    printf("%15s: PID: %d: Sending message '%s' to the MAIN process...\n", "CHILD PROCESS", getpid(), newtext);
+    printf("%15s: Message size: %d\n", " ", bufsize);
+    if(msgsnd(msgid, &msg, bufsize, IPC_NOWAIT) < 0)
+    {
+        printf ("%d, %d, %s, %d\n", msgid, msg.mtype, msg.mtext, bufsize);
+        perror("msgsnd");
+    }
+    return 1;
+}
+
+void receive_messages()
+{
+    message msg;
+    for(int i = 0; i < 9; i++)
+    {
+        if(msgrcv(msgid, &msg, MSGSZ, 1, 0) < 0)
+        {
+            printf ("%d, %d, %s\n", msgid, msg.mtype, msg.mtext);
+            perror("msgsnd");
+        }
+        if(strcmp(msg.mtext, "Executing: ") > 0)
+            printf("%15s: Receied message: %s\n", name, msg.mtext);
+
+    }
+}
+
+void* thread_work(void * param)
+{
+
+    int i = rand() % PROG_COUNT;
+    message msg;
+    
+    printf("%15s: PID: %d: Choose for execution '%s'\n",
+        "CHILD PROCESS", getpid(), shared[i]);
+    printf("%15s: PID: %d: Sending message to the main process...\n", 
+        "CHILD PROCESS", getpid());
+    while(get_sem_value(sem_progs[i]) == 0)
+        sleep(1);
+
+    sem_wait(&(sem_progs[i]));
+    send_message(shared[i]);
+    printf("%15s: PID: %d Executing command:'%s'\n", "CHILD PROCESS", getpid(), shared[i]);
+    system(shared[i]);
+    sem_post(&sem_progs[i]);
+
+    return NULL;
+}
+\end{lstlisting}
+
+\subsection{Output 1}
+\begin{lstlisting}[language=BASH]
+   Process name: state
+---------------------------
+           MAIN: Starting
+           MAIN: PID: 21127
+           MAIN: Created shared programm list:
+              - Key = 137363458
+              - ./exe/threading
+              - ./exe/processes
+              - ./exe/ferry
+           MAIN: Created semaphores for all programms
+              - Key = 1630535682
+              - Semaphore 0 ('./exe/threading'). Value:1
+              - Semaphore 1 ('./exe/processes'). Value:1
+              - Semaphore 2 ('    ./exe/ferry'). Value:1
+           MAIN: Created message queue:
+              - Queue id = 10
+              - Key = 540016642
+  CHILD PROCESS: PID: 21128: Choose for execution './exe/ferry'
+  CHILD PROCESS: PID: 21128: Sending message to the main process...
+NewText: Executing: ./exe/ferry PID: 21128
+  CHILD PROCESS: PID: 21128: Sending message 'Executing: ./exe/ferry PID: 21128' to the MAIN process...
+               : Message size: 43
+  CHILD PROCESS: PID: 21128 Executing command:'./exe/ferry'
+Enter N: 2
+     INFORMATION
+Available places: 4
+    Paratroopers: 4
+          Marins: 4
+        ------------
+  CHILD PROCESS: PID: 21139: Choose for execution './exe/ferry'
+  CHILD PROCESS: PID: 21139: Sending message to the main process...
+ Paratrooper 2 boarded  < Current Time: 1590055699 
+      Marine 4 boarded  < Current Time: 1590055699 
+ Paratrooper 3 boarded  < Current Time: 1590055699 
+ Paratrooper 4 canceled < Current Time: 1590055699 
+ Paratrooper 1 canceled < Current Time: 1590055700 
+      Marine 1 boarded  < Current Time: 1590055701 
+      Marine 2 canceled < Current Time: 1590055701 
+      Marine 3 canceled < Current Time: 1590055701 
+
+Cleaning all threads troops that are not in ferry
+
+  Ferry in trip!
+  Ferry in trip!
+  Ferry in trip!
+
+Eject all troops on coast
+
+ Paratrooper 2 disembarked. < Current time: 1590055704
+      Marine 4 disembarked. < Current time: 1590055705
+ Paratrooper 3 disembarked. < Current time: 1590055706
+      Marine 1 disembarked. < Current time: 1590055707
+  CHILD PROCESS: PID: 21128: Choose for execution './exe/ferry'
+  CHILD PROCESS: PID: 21128: Sending message to the main process...
+NewText: Executing: ./exe/ferry PID: 21128
+  CHILD PROCESS: PID: 21128: Sending message 'Executing: ./exe/ferry PID: 21128' to the MAIN process...
+               : Message size: 43
+  CHILD PROCESS: PID: 21128 Executing command:'./exe/ferry'
+Enter N: 2
+     INFORMATION
+Available places: 4
+    Paratroopers: 4
+          Marins: 4
+        ------------
+ Paratrooper 3 boarded  < Current Time: 1590055709 
+ Paratrooper 4 boarded  < Current Time: 1590055709 
+      Marine 1 boarded  < Current Time: 1590055710 
+      Marine 2 boarded  < Current Time: 1590055711 
+ Paratrooper 2 canceled < Current Time: 1590055711 
+ Paratrooper 1 canceled < Current Time: 1590055711 
+      Marine 3 canceled < Current Time: 1590055711 
+      Marine 4 canceled < Current Time: 1590055712 
+
+Cleaning all threads troops that are not in ferry
+
+  Ferry in trip!
+  Ferry in trip!
+  Ferry in trip!
+
+Eject all troops on coast
+
+ Paratrooper 3 disembarked. < Current time: 1590055715
+ Paratrooper 4 disembarked. < Current time: 1590055716
+      Marine 1 disembarked. < Current time: 1590055717
+      Marine 2 disembarked. < Current time: 1590055718
+  CHILD PROCESS: PID: 21128: Choose for execution './exe/ferry'
+  CHILD PROCESS: PID: 21128: Sending message to the main process...
+NewText: Executing: ./exe/ferry PID: 21128
+  CHILD PROCESS: PID: 21128: Sending message 'Executing: ./exe/ferry PID: 21128' to the MAIN process...
+               : Message size: 43
+  CHILD PROCESS: PID: 21128 Executing command:'./exe/ferry'
+Enter N: 2
+     INFORMATION
+Available places: 4
+    Paratroopers: 4
+          Marins: 4
+        ------------
+ Paratrooper 1 boarded  < Current Time: 1590055721 
+ Paratrooper 4 boarded  < Current Time: 1590055721 
+      Marine 4 boarded  < Current Time: 1590055721 
+      Marine 2 boarded  < Current Time: 1590055721 
+ Paratrooper 2 canceled < Current Time: 1590055722 
+ Paratrooper 3 canceled < Current Time: 1590055722 
+      Marine 1 canceled < Current Time: 1590055723 
+      Marine 3 canceled < Current Time: 1590055723 
+
+Cleaning all threads troops that are not in ferry
+
+  Ferry in trip!
+  Ferry in trip!
+  Ferry in trip!
+
+Eject all troops on coast
+
+ Paratrooper 1 disembarked. < Current time: 1590055726
+ Paratrooper 4 disembarked. < Current time: 1590055727
+      Marine 4 disembarked. < Current time: 1590055728
+      Marine 2 disembarked. < Current time: 1590055729
+NewText: Executing: ./exe/ferry PID: 21139
+  CHILD PROCESS: PID: 21139: Sending message 'Executing: ./exe/ferry PID: 21139' to the MAIN process...
+               : Message size: 43
+  CHILD PROCESS: PID: 21139 Executing command:'./exe/ferry'
+Enter N: 2
+     INFORMATION
+Available places: 4
+    Paratroopers: 4
+          Marins: 4
+        ------------
+ Paratrooper 1 boarded  < Current Time: 1590055732 
+ Paratrooper 2 boarded  < Current Time: 1590055732 
+ Paratrooper 4 boarded  < Current Time: 1590055732 
+      Marine 2 canceled < Current Time: 1590055734 
+ Paratrooper 3 boarded  < Current Time: 1590055734 
+      Marine 3 canceled < Current Time: 1590055734 
+      Marine 1 canceled < Current Time: 1590055735 
+      Marine 4 canceled < Current Time: 1590055735 
+
+Cleaning all threads troops that are not in ferry
+
+  Ferry in trip!
+  Ferry in trip!
+  Ferry in trip!
+
+Eject all troops on coast
+
+ Paratrooper 1 disembarked. < Current time: 1590055738
+ Paratrooper 2 disembarked. < Current time: 1590055739
+ Paratrooper 4 disembarked. < Current time: 1590055740
+ Paratrooper 3 disembarked. < Current time: 1590055741
+  CHILD PROCESS: PID: 21139: Choose for execution './exe/threading'
+  CHILD PROCESS: PID: 21139: Sending message to the main process...
+NewText: Executing: ./exe/threading PID: 21139
+  CHILD PROCESS: PID: 21139: Sending message 'Executing: ./exe/threading PID: 21139' to the MAIN process...
+               : Message size: 47
+  CHILD PROCESS: PID: 21139 Executing command:'./exe/threading'
+Text: thread
+Text: first
+Text: Heh Ipsum
+  CHILD PROCESS: PID: 21139: Choose for execution './exe/ferry'
+  CHILD PROCESS: PID: 21139: Sending message to the main process...
+NewText: Executing: ./exe/ferry PID: 21139
+  CHILD PROCESS: PID: 21139: Sending message 'Executing: ./exe/ferry PID: 21139' to the MAIN process...
+               : Message size: 43
+  CHILD PROCESS: PID: 21139 Executing command:'./exe/ferry'
+Enter N: 2
+     INFORMATION
+Available places: 4
+    Paratroopers: 4
+          Marins: 4
+        ------------
+ Paratrooper 1 boarded  < Current Time: 1590055745 
+      Marine 1 boarded  < Current Time: 1590055745 
+      Marine 2 boarded  < Current Time: 1590055745 
+ Paratrooper 4 boarded  < Current Time: 1590055745 
+      Marine 4 canceled < Current Time: 1590055745 
+ Paratrooper 3 canceled < Current Time: 1590055745 
+ Paratrooper 2 canceled < Current Time: 1590055745 
+      Marine 3 canceled < Current Time: 1590055746 
+
+Cleaning all threads troops that are not in ferry
+
+  Ferry in trip!
+  Ferry in trip!
+  Ferry in trip!
+
+Eject all troops on coast
+
+ Paratrooper 1 disembarked. < Current time: 1590055749
+      Marine 1 disembarked. < Current time: 1590055750
+      Marine 2 disembarked. < Current time: 1590055751
+ Paratrooper 4 disembarked. < Current time: 1590055752
+           MAIN: Receied message: Executing: ./exe/ferry PID: 21128
+           MAIN: Receied message: Executing: ./exe/ferry PID: 21128
+           MAIN: Receied message: Executing: ./exe/ferry PID: 21128
+           MAIN: Receied message: Executing: ./exe/ferry PID: 21139
+           MAIN: Receied message: Executing: ./exe/threading PID: 21139
+           MAIN: Receied message: Executing: ./exe/ferry PID: 21139
+
+\end{lstlisting}
+
+\subsection{Output 2}
+\begin{lstlisting}[language=BASH]
+     Process name: state
+     ---------------------------
+                MAIN: Starting
+                MAIN: PID: 21427
+                MAIN: Created shared programm list:
+                   - Key = 137363458
+                   - ./exe/threading
+                   - ./exe/processes
+                   - ./exe/ferry
+                MAIN: Created semaphores for all programms
+                   - Key = 1630535682
+                   - Semaphore 0 ('./exe/threading'). Value:1
+                   - Semaphore 1 ('./exe/processes'). Value:1
+                   - Semaphore 2 ('    ./exe/ferry'). Value:1
+                MAIN: Created message queue:
+                   - Queue id = 10
+                   - Key = 540016642
+       CHILD PROCESS: PID: 21428: Choose for execution './exe/processes'
+       CHILD PROCESS: PID: 21428: Sending message to the main process...
+     NewText: Executing: ./exe/processes PID: 21428
+       CHILD PROCESS: PID: 21428: Sending message 'Executing: ./exe/processes PID: 21428' to the MAIN process...
+                    : Message size: 47
+       CHILD PROCESS: PID: 21428 Executing command:'./exe/processes'
+       CHILD PROCESS: PID: 21432: Choose for execution './exe/threading'
+       CHILD PROCESS: PID: 21432: Sending message to the main process...
+     NewText: Executing: ./exe/threading PID: 21432
+       CHILD PROCESS: PID: 21432: Sending message 'Executing: ./exe/threading PID: 21432' to the MAIN process...
+                    : Message size: 47
+       CHILD PROCESS: PID: 21432 Executing command:'./exe/threading'
+     Text: thread
+     Text: first
+     Text: Heh Ipsum
+     Child Process:  Global variable: 3 Stack variable: 21 Pid: 21431
+       CHILD PROCESS: PID: 21432: Choose for execution './exe/ferry'
+       CHILD PROCESS: PID: 21432: Sending message to the main process...
+     NewText: Executing: ./exe/ferry PID: 21432
+       CHILD PROCESS: PID: 21432: Sending message 'Executing: ./exe/ferry PID: 21432' to the MAIN process...
+                    : Message size: 43
+       CHILD PROCESS: PID: 21432 Executing command:'./exe/ferry'
+     Parent Process: Global variable: 2 Stack variable: 20 Pid: 21430
+       CHILD PROCESS: PID: 21428: Choose for execution './exe/processes'
+       CHILD PROCESS: PID: 21428: Sending message to the main process...
+     Enter N: 2
+          INFORMATION
+     Available places: 4
+         Paratroopers: 4
+               Marins: 4
+             ------------
+           Marine 1 boarded  < Current Time: 1590055945 
+           Marine 3 boarded  < Current Time: 1590055945 
+      Paratrooper 2 boarded  < Current Time: 1590055945 
+      Paratrooper 4 boarded  < Current Time: 1590055945 
+      Paratrooper 3 canceled < Current Time: 1590055945 
+      Paratrooper 1 canceled < Current Time: 1590055946 
+           Marine 2 canceled < Current Time: 1590055947 
+           Marine 4 canceled < Current Time: 1590055947 
+     
+     Cleaning all threads troops that are not in ferry
+     
+       Ferry in trip!
+       Ferry in trip!
+       Ferry in trip!
+     
+     Eject all troops on coast
+     
+           Marine 1 disembarked. < Current time: 1590055950
+           Marine 3 disembarked. < Current time: 1590055951
+      Paratrooper 2 disembarked. < Current time: 1590055952
+      Paratrooper 4 disembarked. < Current time: 1590055953
+       CHILD PROCESS: PID: 21432: Choose for execution './exe/ferry'
+       CHILD PROCESS: PID: 21432: Sending message to the main process...
+     NewText: Executing: ./exe/ferry PID: 21432
+       CHILD PROCESS: PID: 21432: Sending message 'Executing: ./exe/ferry PID: 21432' to the MAIN process...
+                    : Message size: 43
+       CHILD PROCESS: PID: 21432 Executing command:'./exe/ferry'
+     Enter N: 2
+          INFORMATION
+     Available places: 4
+         Paratroopers: 4
+               Marins: 4
+             ------------
+      Paratrooper 3 boarded  < Current Time: 1590055955 
+      Paratrooper 4 boarded  < Current Time: 1590055955 
+      Paratrooper 2 boarded  < Current Time: 1590055956 
+           Marine 2 canceled < Current Time: 1590055956 
+      Paratrooper 1 boarded  < Current Time: 1590055957 
+           Marine 3 canceled < Current Time: 1590055957 
+           Marine 4 canceled < Current Time: 1590055957 
+           Marine 1 canceled < Current Time: 1590055958 
+     
+     Cleaning all threads troops that are not in ferry
+     
+       Ferry in trip!
+       Ferry in trip!
+       Ferry in trip!
+     
+     Eject all troops on coast
+     
+      Paratrooper 3 disembarked. < Current time: 1590055961
+      Paratrooper 4 disembarked. < Current time: 1590055962
+      Paratrooper 2 disembarked. < Current time: 1590055963
+      Paratrooper 1 disembarked. < Current time: 1590055964
+     NewText: Executing: ./exe/processes PID: 21428
+       CHILD PROCESS: PID: 21428: Sending message 'Executing: ./exe/processes PID: 21428' to the MAIN process...
+                    : Message size: 47
+       CHILD PROCESS: PID: 21428 Executing command:'./exe/processes'
+     Child Process:  Global variable: 3 Stack variable: 21 Pid: 21468
+     Parent Process: Global variable: 2 Stack variable: 20 Pid: 21467
+       CHILD PROCESS: PID: 21428: Choose for execution './exe/threading'
+       CHILD PROCESS: PID: 21428: Sending message to the main process...
+     NewText: Executing: ./exe/threading PID: 21428
+       CHILD PROCESS: PID: 21428: Sending message 'Executing: ./exe/threading PID: 21428' to the MAIN process...
+                    : Message size: 47
+       CHILD PROCESS: PID: 21428 Executing command:'./exe/threading'
+     Text: thread
+     Text: first
+     Text: Heh Ipsum
+                MAIN: Receied message: Executing: ./exe/processes PID: 21428
+                MAIN: Receied message: Executing: ./exe/threading PID: 21432
+                MAIN: Receied message: Executing: ./exe/ferry PID: 21432
+                MAIN: Receied message: Executing: ./exe/ferry PID: 21432
+                MAIN: Receied message: Executing: ./exe/processes PID: 21428
+                MAIN: Receied message: Executing: ./exe/threading PID: 21428
+     
+\end{lstlisting}
+\subsection{Output 3}
+\begin{lstlisting}[language=BASH]
+   Process name: state
+---------------------------
+           MAIN: Starting
+           MAIN: PID: 21722
+           MAIN: Created shared programm list:
+              - Key = 137363458
+              - ./exe/threading
+              - ./exe/processes
+              - ./exe/ferry
+           MAIN: Created semaphores for all programms
+              - Key = 1630535682
+              - Semaphore 0 ('./exe/threading'). Value:1
+              - Semaphore 1 ('./exe/processes'). Value:1
+              - Semaphore 2 ('    ./exe/ferry'). Value:1
+           MAIN: Created message queue:
+              - Queue id = 10
+              - Key = 540016642
+  CHILD PROCESS: PID: 21723: Choose for execution './exe/threading'
+  CHILD PROCESS: PID: 21723: Sending message to the main process...
+NewText: Executing: ./exe/threading PID: 21723
+  CHILD PROCESS: PID: 21723: Sending message 'Executing: ./exe/threading PID: 21723' to the MAIN process...
+               : Message size: 47
+  CHILD PROCESS: PID: 21723 Executing command:'./exe/threading'
+Text: thread
+Text: first
+Text: Heh Ipsum
+  CHILD PROCESS: PID: 21723: Choose for execution './exe/processes'
+  CHILD PROCESS: PID: 21723: Sending message to the main process...
+NewText: Executing: ./exe/processes PID: 21723
+  CHILD PROCESS: PID: 21723: Sending message 'Executing: ./exe/processes PID: 21723' to the MAIN process...
+               : Message size: 47
+  CHILD PROCESS: PID: 21723 Executing command:'./exe/processes'
+  CHILD PROCESS: PID: 21730: Choose for execution './exe/ferry'
+  CHILD PROCESS: PID: 21730: Sending message to the main process...
+NewText: Executing: ./exe/ferry PID: 21730
+  CHILD PROCESS: PID: 21730: Sending message 'Executing: ./exe/ferry PID: 21730' to the MAIN process...
+               : Message size: 43
+  CHILD PROCESS: PID: 21730 Executing command:'./exe/ferry'
+Enter N: 2
+     INFORMATION
+Available places: 4
+    Paratroopers: 4
+          Marins: 4
+        ------------
+Child Process:  Global variable: 3 Stack variable: 21 Pid: 21729
+Parent Process: Global variable: 2 Stack variable: 20 Pid: 21728
+  CHILD PROCESS: PID: 21723: Choose for execution './exe/threading'
+  CHILD PROCESS: PID: 21723: Sending message to the main process...
+ Paratrooper 2 boarded  < Current Time: 1590056189 
+ Paratrooper 4 boarded  < Current Time: 1590056189 
+ Paratrooper 1 boarded  < Current Time: 1590056190 
+ Paratrooper 3 boarded  < Current Time: 1590056190 
+      Marine 1 canceled < Current Time: 1590056191 
+      Marine 2 canceled < Current Time: 1590056191 
+      Marine 3 canceled < Current Time: 1590056191 
+      Marine 4 canceled < Current Time: 1590056191 
+
+Cleaning all threads troops that are not in ferry
+
+  Ferry in trip!
+  Ferry in trip!
+  Ferry in trip!
+
+Eject all troops on coast
+
+ Paratrooper 2 disembarked. < Current time: 1590056194
+ Paratrooper 4 disembarked. < Current time: 1590056195
+ Paratrooper 1 disembarked. < Current time: 1590056196
+ Paratrooper 3 disembarked. < Current time: 1590056197
+  CHILD PROCESS: PID: 21730: Choose for execution './exe/ferry'
+  CHILD PROCESS: PID: 21730: Sending message to the main process...
+NewText: Executing: ./exe/ferry PID: 21730
+  CHILD PROCESS: PID: 21730: Sending message 'Executing: ./exe/ferry PID: 21730' to the MAIN process...
+               : Message size: 43
+  CHILD PROCESS: PID: 21730 Executing command:'./exe/ferry'
+Enter N: 2
+     INFORMATION
+Available places: 4
+    Paratroopers: 4
+          Marins: 4
+        ------------
+ Paratrooper 3 boarded  < Current Time: 1590056199 
+      Marine 3 boarded  < Current Time: 1590056200 
+      Marine 1 boarded  < Current Time: 1590056201 
+ Paratrooper 1 boarded  < Current Time: 1590056201 
+      Marine 2 canceled < Current Time: 1590056201 
+ Paratrooper 2 canceled < Current Time: 1590056201 
+ Paratrooper 4 canceled < Current Time: 1590056201 
+      Marine 4 canceled < Current Time: 1590056202 
+
+Cleaning all threads troops that are not in ferry
+
+  Ferry in trip!
+  Ferry in trip!
+  Ferry in trip!
+
+Eject all troops on coast
+
+ Paratrooper 3 disembarked. < Current time: 1590056205
+      Marine 3 disembarked. < Current time: 1590056206
+      Marine 1 disembarked. < Current time: 1590056207
+ Paratrooper 1 disembarked. < Current time: 1590056208
+  CHILD PROCESS: PID: 21730: Choose for execution './exe/ferry'
+  CHILD PROCESS: PID: 21730: Sending message to the main process...
+NewText: Executing: ./exe/ferry PID: 21730
+  CHILD PROCESS: PID: 21730: Sending message 'Executing: ./exe/ferry PID: 21730' to the MAIN process...
+               : Message size: 43
+  CHILD PROCESS: PID: 21730 Executing command:'./exe/ferry'
+Enter N: 2
+     INFORMATION
+Available places: 4
+    Paratroopers: 4
+          Marins: 4
+        ------------
+ Paratrooper 4 boarded  < Current Time: 1590056210 
+      Marine 2 boarded  < Current Time: 1590056211 
+ Paratrooper 1 boarded  < Current Time: 1590056212 
+ Paratrooper 2 canceled < Current Time: 1590056212 
+ Paratrooper 3 canceled < Current Time: 1590056212 
+      Marine 1 boarded  < Current Time: 1590056213 
+      Marine 3 canceled < Current Time: 1590056213 
+      Marine 4 canceled < Current Time: 1590056213 
+
+Cleaning all threads troops that are not in ferry
+
+  Ferry in trip!
+  Ferry in trip!
+  Ferry in trip!
+
+Eject all troops on coast
+
+ Paratrooper 4 disembarked. < Current time: 1590056216
+      Marine 2 disembarked. < Current time: 1590056217
+ Paratrooper 1 disembarked. < Current time: 1590056218
+      Marine 1 disembarked. < Current time: 1590056219
+NewText: Executing: ./exe/threading PID: 21723
+  CHILD PROCESS: PID: 21723: Sending message 'Executing: ./exe/threading PID: 21723' to the MAIN process...
+               : Message size: 47
+  CHILD PROCESS: PID: 21723 Executing command:'./exe/threading'
+Text: thread
+Text: first
+Text: Heh Ipsum
+           MAIN: Receied message: Executing: ./exe/threading PID: 21723
+           MAIN: Receied message: Executing: ./exe/processes PID: 21723
+           MAIN: Receied message: Executing: ./exe/ferry PID: 21730
+           MAIN: Receied message: Executing: ./exe/ferry PID: 21730
+           MAIN: Receied message: Executing: ./exe/ferry PID: 21730
+           MAIN: Receied message: Executing: ./exe/threading PID: 21723
+
+\end{lstlisting}
+\subsection{Output 4}
+\begin{lstlisting}[language=BASH]
+g++ -g main.cpp -o main.o -lpthread
+./main.o
+     Process name: state
+---------------------------
+               MAIN: Starting
+               MAIN: PID: 22009
+               MAIN: Created shared programm list:
+               - Key = 137363458
+               - ./exe/threading
+               - ./exe/processes
+               - ./exe/ferry
+               MAIN: Created semaphores for all programms
+               - Key = 1630535682
+               - Semaphore 0 ('./exe/threading'). Value:1
+               - Semaphore 1 ('./exe/processes'). Value:1
+               - Semaphore 2 ('    ./exe/ferry'). Value:1
+               MAIN: Created message queue:
+               - Queue id = 10
+               - Key = 540016642
+     CHILD PROCESS: PID: 22010: Choose for execution './exe/ferry'
+     CHILD PROCESS: PID: 22010: Sending message to the main process...
+NewText: Executing: ./exe/ferry PID: 22010
+     CHILD PROCESS: PID: 22010: Sending message 'Executing: ./exe/ferry PID: 22010' to the MAIN process...
+               : Message size: 43
+     CHILD PROCESS: PID: 22010 Executing command:'./exe/ferry'
+Enter N: 2
+     INFORMATION
+Available places: 4
+     Paratroopers: 4
+          Marins: 4
+          ------------
+     CHILD PROCESS: PID: 22021: Choose for execution './exe/ferry'
+     CHILD PROCESS: PID: 22021: Sending message to the main process...
+     Paratrooper 2 boarded  < Current Time: 1590056425 
+     Paratrooper 3 boarded  < Current Time: 1590056425 
+          Marine 3 boarded  < Current Time: 1590056426 
+     Paratrooper 4 canceled < Current Time: 1590056426 
+     Paratrooper 1 canceled < Current Time: 1590056427 
+          Marine 4 boarded  < Current Time: 1590056427 
+          Marine 1 canceled < Current Time: 1590056428 
+          Marine 2 canceled < Current Time: 1590056428 
+
+Cleaning all threads troops that are not in ferry
+
+     Ferry in trip!
+     Ferry in trip!
+     Ferry in trip!
+
+Eject all troops on coast
+
+     Paratrooper 2 disembarked. < Current time: 1590056431
+     Paratrooper 3 disembarked. < Current time: 1590056432
+          Marine 3 disembarked. < Current time: 1590056433
+          Marine 4 disembarked. < Current time: 1590056434
+     CHILD PROCESS: PID: 22010: Choose for execution './exe/ferry'
+     CHILD PROCESS: PID: 22010: Sending message to the main process...
+NewText: Executing: ./exe/ferry PID: 22021
+     CHILD PROCESS: PID: 22010: Sending message 'Executing: ./exe/ferry PID: 22021' to the MAIN process...
+               : Message size: 43
+     CHILD PROCESS: PID: 22010 Executing command:'./exe/ferry'
+Enter N: 2
+     INFORMATION
+Available places: 4
+     Paratroopers: 4
+          Marins: 4
+          ------------
+     Paratrooper 1 boarded  < Current Time: 1590056437 
+          Marine 2 boarded  < Current Time: 1590056437 
+          Marine 1 boarded  < Current Time: 1590056437 
+     Paratrooper 2 boarded  < Current Time: 1590056437 
+     Paratrooper 4 canceled < Current Time: 1590056437 
+          Marine 4 canceled < Current Time: 1590056437 
+     Paratrooper 3 canceled < Current Time: 1590056438 
+          Marine 3 canceled < Current Time: 1590056439 
+
+Cleaning all threads troops that are not in ferry
+
+     Ferry in trip!
+     Ferry in trip!
+     Ferry in trip!
+
+Eject all troops on coast
+
+     Paratrooper 1 disembarked. < Current time: 1590056442
+          Marine 2 disembarked. < Current time: 1590056443
+          Marine 1 disembarked. < Current time: 1590056444
+     Paratrooper 2 disembarked. < Current time: 1590056445
+     CHILD PROCESS: PID: 22010: Choose for execution './exe/ferry'
+     CHILD PROCESS: PID: 22010: Sending message to the main process...
+NewText: Executing: ./exe/ferry PID: 22010
+     CHILD PROCESS: PID: 22010: Sending message 'Executing: ./exe/ferry PID: 22010' to the MAIN process...
+               : Message size: 43
+     CHILD PROCESS: PID: 22010 Executing command:'./exe/ferry'
+Enter N: 2
+     INFORMATION
+Available places: 4
+     Paratroopers: 4
+          Marins: 4
+          ------------
+     Paratrooper 1 boarded  < Current Time: 1590056448 
+     Paratrooper 3 boarded  < Current Time: 1590056448 
+     Paratrooper 2 boarded  < Current Time: 1590056448 
+          Marine 2 canceled < Current Time: 1590056449 
+     Paratrooper 4 boarded  < Current Time: 1590056449 
+          Marine 1 canceled < Current Time: 1590056450 
+          Marine 4 canceled < Current Time: 1590056450 
+          Marine 3 canceled < Current Time: 1590056451 
+
+Cleaning all threads troops that are not in ferry
+
+     Ferry in trip!
+     Ferry in trip!
+     Ferry in trip!
+
+Eject all troops on coast
+
+     Paratrooper 1 disembarked. < Current time: 1590056454
+     Paratrooper 3 disembarked. < Current time: 1590056455
+     Paratrooper 2 disembarked. < Current time: 1590056456
+     Paratrooper 4 disembarked. < Current time: 1590056457
+NewText: Executing: ./exe/ferry PID: 22021
+     CHILD PROCESS: PID: 22021: Sending message 'Executing: ./exe/ferry PID: 22021' to the MAIN process...
+               : Message size: 43
+     CHILD PROCESS: PID: 22021 Executing command:'./exe/ferry'
+Enter N: 2
+     INFORMATION
+Available places: 4
+     Paratroopers: 4
+          Marins: 4
+          ------------
+     Paratrooper 1 boarded  < Current Time: 1590056459 
+     Paratrooper 3 boarded  < Current Time: 1590056459 
+     Paratrooper 2 boarded  < Current Time: 1590056460 
+     Paratrooper 4 boarded  < Current Time: 1590056461 
+          Marine 1 canceled < Current Time: 1590056462 
+          Marine 2 canceled < Current Time: 1590056462 
+          Marine 3 canceled < Current Time: 1590056462 
+          Marine 4 canceled < Current Time: 1590056462 
+
+Cleaning all threads troops that are not in ferry
+
+     Ferry in trip!
+     Ferry in trip!
+     Ferry in trip!
+
+Eject all troops on coast
+
+     Paratrooper 1 disembarked. < Current time: 1590056465
+     Paratrooper 3 disembarked. < Current time: 1590056466
+     Paratrooper 2 disembarked. < Current time: 1590056467
+     Paratrooper 4 disembarked. < Current time: 1590056468
+     CHILD PROCESS: PID: 22021: Choose for execution './exe/ferry'
+     CHILD PROCESS: PID: 22021: Sending message to the main process...
+NewText: Executing: ./exe/ferry PID: 22010
+     CHILD PROCESS: PID: 22021: Sending message 'Executing: ./exe/ferry PID: 22010' to the MAIN process...
+               : Message size: 43
+     CHILD PROCESS: PID: 22021 Executing command:'./exe/ferry'
+Enter N: 2
+     INFORMATION
+Available places: 4
+     Paratroopers: 4
+          Marins: 4
+          ------------
+     Paratrooper 3 boarded  < Current Time: 1590056471 
+     Paratrooper 1 boarded  < Current Time: 1590056472 
+          Marine 2 boarded  < Current Time: 1590056472 
+     Paratrooper 2 canceled < Current Time: 1590056472 
+          Marine 4 boarded  < Current Time: 1590056472 
+     Paratrooper 4 canceled < Current Time: 1590056473 
+          Marine 1 canceled < Current Time: 1590056474 
+          Marine 3 canceled < Current Time: 1590056474 
+
+Cleaning all threads troops that are not in ferry
+
+     Ferry in trip!
+     Ferry in trip!
+     Ferry in trip!
+
+Eject all troops on coast
+
+     Paratrooper 3 disembarked. < Current time: 1590056477
+     Paratrooper 1 disembarked. < Current time: 1590056478
+          Marine 2 disembarked. < Current time: 1590056479
+          Marine 4 disembarked. < Current time: 1590056480
+     CHILD PROCESS: PID: 22021: Choose for execution './exe/threading'
+     CHILD PROCESS: PID: 22021: Sending message to the main process...
+NewText: Executing: ./exe/threading PID: 22021
+     CHILD PROCESS: PID: 22021: Sending message 'Executing: ./exe/threading PID: 22021' to the MAIN process...
+               : Message size: 47
+     CHILD PROCESS: PID: 22021 Executing command:'./exe/threading'
+Text: thread
+Text: first
+Text: Heh Ipsum
+               MAIN: Receied message: Executing: ./exe/ferry PID: 22010
+               MAIN: Receied message: Executing: ./exe/ferry PID: 22021
+               MAIN: Receied message: Executing: ./exe/ferry PID: 22010
+               MAIN: Receied message: Executing: ./exe/ferry PID: 22021
+               MAIN: Receied message: Executing: ./exe/ferry PID: 22010
+               MAIN: Receied message: Executing: ./exe/threading PID: 22021
+\end{lstlisting}
+
+\subsection{Output 5}
+\begin{lstlisting}[language=BASH]
+   Process name: state
+---------------------------
+           MAIN: Starting
+           MAIN: PID: 22176
+           MAIN: Created shared programm list:
+              - Key = 137363458
+              - ./exe/threading
+              - ./exe/processes
+              - ./exe/ferry
+           MAIN: Created semaphores for all programms
+              - Key = 1630535682
+              - Semaphore 0 ('./exe/threading'). Value:1
+              - Semaphore 1 ('./exe/processes'). Value:1
+              - Semaphore 2 ('    ./exe/ferry'). Value:1
+           MAIN: Created message queue:
+              - Queue id = 10
+              - Key = 540016642
+  CHILD PROCESS: PID: 22177: Choose for execution './exe/threading'
+  CHILD PROCESS: PID: 22177: Sending message to the main process...
+NewText: Executing: ./exe/threading PID: 22177
+  CHILD PROCESS: PID: 22177: Sending message 'Executing: ./exe/threading PID: 22177' to the MAIN process...
+               : Message size: 47
+  CHILD PROCESS: PID: 22177 Executing command:'./exe/threading'
+Text: thread
+Text: first
+Text: Heh Ipsum
+  CHILD PROCESS: PID: 22177: Choose for execution './exe/threading'
+  CHILD PROCESS: PID: 22177: Sending message to the main process...
+NewText: Executing: ./exe/threading PID: 22177
+  CHILD PROCESS: PID: 22177: Sending message 'Executing: ./exe/threading PID: 22177' to the MAIN process...
+               : Message size: 47
+  CHILD PROCESS: PID: 22177 Executing command:'./exe/threading'
+Text: thread
+Text: first
+Text: Heh Ipsum
+  CHILD PROCESS: PID: 22177: Choose for execution './exe/threading'
+  CHILD PROCESS: PID: 22177: Sending message to the main process...
+NewText: Executing: ./exe/threading PID: 22177
+  CHILD PROCESS: PID: 22177: Sending message 'Executing: ./exe/threading PID: 22177' to the MAIN process...
+               : Message size: 47
+  CHILD PROCESS: PID: 22177 Executing command:'./exe/threading'
+Text: thread
+Text: first
+Text: Heh Ipsum
+  CHILD PROCESS: PID: 22187: Choose for execution './exe/processes'
+  CHILD PROCESS: PID: 22187: Sending message to the main process...
+NewText: Executing: ./exe/processes PID: 22187
+  CHILD PROCESS: PID: 22187: Sending message 'Executing: ./exe/processes PID: 22187' to the MAIN process...
+               : Message size: 47
+  CHILD PROCESS: PID: 22187 Executing command:'./exe/processes'
+Child Process:  Global variable: 3 Stack variable: 21 Pid: 22190
+Parent Process: Global variable: 2 Stack variable: 20 Pid: 22189
+  CHILD PROCESS: PID: 22187: Choose for execution './exe/processes'
+  CHILD PROCESS: PID: 22187: Sending message to the main process...
+NewText: Executing: ./exe/processes PID: 22187
+  CHILD PROCESS: PID: 22187: Sending message 'Executing: ./exe/processes PID: 22187' to the MAIN process...
+               : Message size: 47
+  CHILD PROCESS: PID: 22187 Executing command:'./exe/processes'
+Child Process:  Global variable: 3 Stack variable: 21 Pid: 22193
+Parent Process: Global variable: 2 Stack variable: 20 Pid: 22192
+  CHILD PROCESS: PID: 22187: Choose for execution './exe/processes'
+  CHILD PROCESS: PID: 22187: Sending message to the main process...
+NewText: Executing: ./exe/processes PID: 22187
+  CHILD PROCESS: PID: 22187: Sending message 'Executing: ./exe/processes PID: 22187' to the MAIN process...
+               : Message size: 47
+  CHILD PROCESS: PID: 22187 Executing command:'./exe/processes'
+Child Process:  Global variable: 3 Stack variable: 21 Pid: 22196
+Parent Process: Global variable: 2 Stack variable: 20 Pid: 22195
+           MAIN: Receied message: Executing: ./exe/threading PID: 22177
+           MAIN: Receied message: Executing: ./exe/threading PID: 22177
+           MAIN: Receied message: Executing: ./exe/threading PID: 22177
+           MAIN: Receied message: Executing: ./exe/processes PID: 22187
+           MAIN: Receied message: Executing: ./exe/processes PID: 22187
+           MAIN: Receied message: Executing: ./exe/processes PID: 22187
+\end{lstlisting}
+
+\subsection{Output 6}
+\begin{lstlisting}[language=BASH]
+   Process name: state
+---------------------------
+           MAIN: Starting
+           MAIN: PID: 22659
+           MAIN: Created shared programm list:
+              - Key = 137363458
+              - ./exe/threading
+              - ./exe/processes
+              - ./exe/ferry
+           MAIN: Created semaphores for all programms
+              - Key = 1630535682
+              - Semaphore 0 ('./exe/threading'). Value:1
+              - Semaphore 1 ('./exe/processes'). Value:1
+              - Semaphore 2 ('    ./exe/ferry'). Value:1
+           MAIN: Created message queue:
+              - Queue id = 10
+              - Key = 540016642
+  CHILD PROCESS: PID: 22660: Choose for execution './exe/threading'
+  CHILD PROCESS: PID: 22660: Sending message to the main process...
+NewText: Executing: ./exe/threading PID: 22660
+  CHILD PROCESS: PID: 22660: Sending message 'Executing: ./exe/threading PID: 22660' to the MAIN process...
+               : Message size: 47
+  CHILD PROCESS: PID: 22660 Executing command:'./exe/threading'
+Text: thread
+Text: first
+Text: Heh Ipsum
+  CHILD PROCESS: PID: 22660: Choose for execution './exe/processes'
+  CHILD PROCESS: PID: 22660: Sending message to the main process...
+NewText: Executing: ./exe/processes PID: 22660
+  CHILD PROCESS: PID: 22660: Sending message 'Executing: ./exe/processes PID: 22660' to the MAIN process...
+               : Message size: 47
+  CHILD PROCESS: PID: 22660 Executing command:'./exe/processes'
+  CHILD PROCESS: PID: 22667: Choose for execution './exe/threading'
+  CHILD PROCESS: PID: 22667: Sending message to the main process...
+NewText: Executing: ./exe/threading PID: 22667
+  CHILD PROCESS: PID: 22667: Sending message 'Executing: ./exe/threading PID: 22667' to the MAIN process...
+               : Message size: 47
+  CHILD PROCESS: PID: 22667 Executing command:'./exe/threading'
+Text: thread
+Text: first
+Text: Heh Ipsum
+  CHILD PROCESS: PID: 22667: Choose for execution './exe/processes'
+  CHILD PROCESS: PID: 22667: Sending message to the main process...
+NewText: Executing: ./exe/processes PID: 22667
+  CHILD PROCESS: PID: 22667: Sending message 'Executing: ./exe/processes PID: 22667' to the MAIN process...
+               : Message size: 47
+  CHILD PROCESS: PID: 22667 Executing command:'./exe/processes'
+Child Process:  Global variable: 3 Stack variable: 21 Pid: 22666
+Parent Process: Global variable: 2 Stack variable: 20 Pid: 22665
+  CHILD PROCESS: PID: 22660: Choose for execution './exe/ferry'
+  CHILD PROCESS: PID: 22660: Sending message to the main process...
+NewText: Executing: ./exe/ferry PID: 22660
+  CHILD PROCESS: PID: 22660: Sending message 'Executing: ./exe/ferry PID: 22660' to the MAIN process...
+               : Message size: 43
+  CHILD PROCESS: PID: 22660 Executing command:'./exe/ferry'
+Enter N: 2
+     INFORMATION
+Available places: 4
+    Paratroopers: 4
+          Marins: 4
+        ------------
+Child Process:  Global variable: 3 Stack variable: 21 Pid: 22675
+Parent Process: Global variable: 2 Stack variable: 20 Pid: 22672
+  CHILD PROCESS: PID: 22667: Choose for execution './exe/threading'
+  CHILD PROCESS: PID: 22667: Sending message to the main process...
+NewText: Executing: ./exe/threading PID: 22667
+  CHILD PROCESS: PID: 22667: Sending message 'Executing: ./exe/threading PID: 22667' to the MAIN process...
+               : Message size: 47
+  CHILD PROCESS: PID: 22667 Executing command:'./exe/threading'
+ Paratrooper 2 boarded  < Current Time: 1590056874 
+Text: thread
+Text: first
+Text: Heh Ipsum
+      Marine 1 boarded  < Current Time: 1590056875 
+      Marine 2 boarded  < Current Time: 1590056875 
+ Paratrooper 1 boarded  < Current Time: 1590056875 
+ Paratrooper 3 canceled < Current Time: 1590056875 
+      Marine 4 canceled < Current Time: 1590056875 
+ Paratrooper 4 canceled < Current Time: 1590056876 
+      Marine 3 canceled < Current Time: 1590056877 
+
+Cleaning all threads troops that are not in ferry
+
+  Ferry in trip!
+  Ferry in trip!
+  Ferry in trip!
+
+Eject all troops on coast
+
+ Paratrooper 2 disembarked. < Current time: 1590056880
+      Marine 1 disembarked. < Current time: 1590056881
+      Marine 2 disembarked. < Current time: 1590056882
+ Paratrooper 1 disembarked. < Current time: 1590056883
+           MAIN: Receied message: Executing: ./exe/threading PID: 22660
+           MAIN: Receied message: Executing: ./exe/processes PID: 22660
+           MAIN: Receied message: Executing: ./exe/threading PID: 22667
+           MAIN: Receied message: Executing: ./exe/processes PID: 22667
+           MAIN: Receied message: Executing: ./exe/ferry PID: 22660
+           MAIN: Receied message: Executing: ./exe/threading PID: 22667
+
+\end{lstlisting}
+
+
+\newpage
+\section{Висновки}
+У цій лабораторній роботі я навчився синхронізовувати процеси між собою, надсилати повідомлення від процесу до процесу. Навчився використовувати спільні області пам'яті для процесів за допомогою shmget. Дізнався що можна використовувати семафори для забезбечення виконання ``критичних секцій'' не тільки в різних потоках але і різні процеси, що теж дуже важливо.
+
+\end{document}

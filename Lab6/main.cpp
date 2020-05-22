@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <sys/wait.h>
 // Declaration for exit()
 using namespace std;
 
@@ -22,8 +23,8 @@ int main()
         sleep(1);
         globalVariable++;
         iStackVariable++;
-        execl("/bin/ps", "/bin/ps", "-U", "eski", 0);
-        _exit(EXIT_SUCCESS);
+        // execl("/bin/ps", "/bin/ps", "-U", "eski", 0);
+        // _exit(EXIT_SUCCESS);
         
     }
     else if (pID < 0)
@@ -36,8 +37,10 @@ int main()
     {
         // Code only executed by parent process
         sIdentifier = "Parent Process:";
+        wait(&pID);
     }
     // Code executed by both parent and child.
+    
     cout << sIdentifier;
     cout << " Global variable: " << globalVariable;
     cout << " Stack variable: " << iStackVariable 

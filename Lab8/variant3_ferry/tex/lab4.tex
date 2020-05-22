@@ -74,6 +74,482 @@
 \begin{document}
  \include{title}
 
+
+\section{Розминка.}
+\large Стандартна задача виробник-споживач.
+C++
+\subsection{Input data}
+\label{inputdata}
+\noindent Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod 
+tempor incididunt ut labore et dolore magna aliqua. Nulla facilisi nullam vehicula 
+ipsum a arcu cursus vitae. Donec et odio pellentesque diam volutpat commodo. In pellentesque massa
+
+\noindent placerat duis ultricies lacus sed. Enim nec dui nunc mattis enim. Id consectetur purus
+ut faucibus pulvinar elementum integer. Pharetra pharetra massa massa ultricies.
+Pretium quam vulputate dignissim suspendisse in est ante. Sapien nec sagittis
+aliquam malesuada bibendum. Quis hendrerit dolor magna eget est lorem ipsum. Amet cursus sit amet dictum sit.
+
+\noindent Leo integer malesuada nunc vel risus commodo. Arcu non odio euismod lacinia. 
+Orci ac auctor augue mauris. Eu non diam phasellus vestibulum lorem. Nibh tortor id aliquet lectus proin nibh.
+
+\noindent Proin fermentum leo vel orci porta non pulvinar neque. Molestie nunc non blandit massa enim nec dui nunc mattis. 
+
+\noindent Habitant morbi tristique senectus et. Mattis rhoncus urna neque viverra justo nec. Ultricies integer quis auctor
+
+\noindent elit sed vulputate mi sit. Justo eget magna fermentum iaculis.
+
+\subsection{Code}
+
+\begin{lstlisting}[language=C++]
+#include <stdlib.h>
+#include <stdio.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <queue>
+#include <semaphore.h>
+#include <time.h>
+using std::queue;
+
+queue<char*> q;
+const int max_size = 5;
+FILE * file;
+int done = 0;
+
+sem_t lock;
+sem_t full;
+sem_t empty;
+
+void * produce(void * param)
+{
+	char * text;
+	while(!done)
+	{
+		sem_wait(&empty);
+		sem_wait(&lock);
+		text = (char*)malloc(255 * sizeof(char));
+		if (fgets(text, 256, file) != NULL)
+		{
+			q.push(text);
+			printf("%s %d [!] Text has been added! \n\n", (char*)param, pthread_self());
+		}
+		else
+		{
+			done = 1;
+		}
+		sem_post(&lock);
+		sem_post(&full);
+		sleep(rand() % 4); // random sleep;
+	}
+	return NULL;
+}
+
+void * consume(void * param)
+{
+	while(!done || !q.empty()) // when both conditions is False exit the loop;
+	{
+		sem_wait(&full);
+		sem_wait(&lock);
+		if(!q.empty())
+		{
+			printf("%s: %d [!] Text: \n----------------------------------\n %s-------------------------------------\n",(char*)param , pthread_self(), q.front());
+			q.pop();
+		}
+		sem_post(&lock);
+		sem_post(&empty);
+		sleep(rand() % 4); // random sleep;
+	}
+	return NULL;
+}
+
+int main(int argv, char * argc[])
+{
+	srand(time(0));
+
+	sem_init(&lock, 0, 1);
+	sem_init(&full, 0, 0);
+	sem_init(&empty,0, max_size);
+	file = fopen("lorem_ipsum.txt", "r");
+
+	pthread_t cons1, cons2;
+	pthread_t prod1, prod2;
+
+	pthread_create(&prod1, NULL, produce, (void*)"producer1");
+	pthread_create(&prod2, NULL, produce, (void*)"producer2");
+	pthread_create(&cons1, NULL, consume, (void*)"consumer1");
+	pthread_create(&cons2, NULL, consume, (void*)"consumer2");
+
+	pthread_join(prod1, NULL);
+	pthread_join(prod2, NULL);
+	pthread_join(cons1, NULL);
+	pthread_join(cons2, NULL);
+	
+	return 0;
+}
+\end{lstlisting}
+\subsection{Programm output}
+\normalsize
+\begin{lstlisting}[]
+producer1 -2053208320 [!] Text has been added! 
+
+consumer2: 2147481344 [!] Text: 
+----------------------------------
+ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod 
+-------------------------------------
+producer2 -2061601024 [!] Text has been added! 
+
+consumer1: -2069993728 [!] Text: 
+----------------------------------
+ tempor incididunt ut labore et dolore magna aliqua. Nulla facilisi nullam vehicula 
+-------------------------------------
+producer2 -2061601024 [!] Text has been added! 
+
+producer2 -2061601024 [!] Text has been added! 
+
+producer1 -2053208320 [!] Text has been added! 
+
+producer2 -2061601024 [!] Text has been added! 
+
+producer2 -2061601024 [!] Text has been added! 
+
+consumer2: 2147481344 [!] Text: 
+----------------------------------
+ ipsum a arcu cursus vitae. Donec et odio pellentesque diam volutpat commodo. In pellentesque massa
+-------------------------------------
+consumer2: 2147481344 [!] Text: 
+----------------------------------
+ placerat duis ultricies lacus sed. Enim nec dui nunc mattis enim. Id consectetur purus
+-------------------------------------
+producer1 -2053208320 [!] Text has been added! 
+
+consumer1: -2069993728 [!] Text: 
+----------------------------------
+ ut faucibus pulvinar elementum integer. Pharetra pharetra massa massa ultricies.
+-------------------------------------
+consumer2: 2147481344 [!] Text: 
+----------------------------------
+ Pretium quam vulputate dignissim suspendisse in est ante. Sapien nec sagittis
+-------------------------------------
+consumer1: -2069993728 [!] Text: 
+----------------------------------
+ aliquam malesuada bibendum. Quis hendrerit dolor magna eget est lorem ipsum. Amet cursus sit amet dictum sit.
+-------------------------------------
+producer2 -2061601024 [!] Text has been added! 
+
+consumer1: -2069993728 [!] Text: 
+----------------------------------
+ Leo integer malesuada nunc vel risus commodo. Arcu non odio euismod lacinia. 
+-------------------------------------
+consumer1: -2069993728 [!] Text: 
+----------------------------------
+ Orci ac auctor augue mauris. Eu non diam phasellus vestibulum lorem. Nibh tortor id aliquet lectus proin nibh.
+-------------------------------------
+producer2 -2061601024 [!] Text has been added! 
+
+consumer1: -2069993728 [!] Text: 
+----------------------------------
+ Proin fermentum leo vel orci porta non pulvinar neque. Molestie nunc non blandit massa enim nec dui nunc mattis. 
+-------------------------------------
+producer1 -2053208320 [!] Text has been added! 
+
+consumer2: 2147481344 [!] Text: 
+----------------------------------
+ Habitant morbi tristique senectus et. Mattis rhoncus urna neque viverra justo nec. Ultricies integer quis auctor
+-------------------------------------
+producer1 -2053208320 [!] Text has been added! 
+
+consumer1: -2069993728 [!] Text: 
+----------------------------------
+ elit sed vulputate mi sit. Justo eget magna fermentum iaculis.
+-------------------------------------
+
+\end{lstlisting}
+
+
+\newpage
+\section{Продовження розминки.}
+\large Теж саме, але не на семафорах, а на м’ютексі і
+умовних змінних. 
+C++
+
+\subsection{Input file}
+
+Такий самий (Див \ref{inputdata})
+
+\subsection{Code}
+\begin{lstlisting}[language=C++]
+#include <stdlib.h>
+#include <stdio.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <queue>
+#include <semaphore.h>
+#include <time.h>
+using std::queue;
+
+queue<char*> q;
+FILE * file;
+int done = 0;
+
+pthread_mutex_t mutex;
+
+void * produce(void * param)
+{
+	char * text;
+	while(!done)
+	{
+		pthread_mutex_lock(&mutex);
+		text = (char*)malloc(255 * sizeof(char));
+		if (fgets(text, 256, file) != NULL)
+		{
+			q.push(text);
+			printf("%s %d [!] Text has been added! \n\n", (char*)param, pthread_self());
+		}
+		else
+		{
+			done = 1;
+		}
+		pthread_mutex_unlock(&mutex);
+		sleep(rand() % 4); // random sleep;
+	}
+	return NULL;
+
+}
+
+void * consume(void * param)
+{
+	while(!done || !q.empty()) // when both conditions is False exit the loop;
+	{
+		pthread_mutex_lock(&mutex);
+		if(!q.empty())
+		{
+			printf("%s: %d [!] Text: \n-------------------\n %s--------------------\n",(char*)param , pthread_self(), q.front());
+			q.pop();
+		}
+		pthread_mutex_unlock(&mutex);
+		sleep(rand() % 4); // random sleep;
+	}
+	return NULL;
+}
+
+int main(int argv, char * argc[])
+{
+	srand(time(0));
+
+	file = fopen("lorem_ipsum.txt", "r");
+
+	pthread_t cons1, cons2;
+	pthread_t prod1, prod2;
+	pthread_mutex_init(&mutex, NULL);
+
+	pthread_create(&prod1, NULL, produce, (void*)"producer1");
+	pthread_create(&prod2, NULL, produce, (void*)"producer2");
+	pthread_create(&cons1, NULL, consume, (void*)"consumer1");
+	pthread_create(&cons2, NULL, consume, (void*)"consumer2");
+
+	pthread_join(prod1, NULL);
+	pthread_join(prod2, NULL);
+	pthread_join(cons1, NULL);
+	pthread_join(cons2, NULL);
+	
+	return 0;
+}
+\end{lstlisting}
+
+\subsection{Program output}
+\normalsize
+\begin{lstlisting}[]
+producer1 -1394247936 [!] Text has been added! 
+
+producer2 -1402640640 [!] Text has been added! 
+
+producer2 -1402640640 [!] Text has been added! 
+
+consumer1: -1411033344 [!] Text: 
+-------------------
+ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod 
+--------------------
+consumer2: -1419426048 [!] Text: 
+-------------------
+ tempor incididunt ut labore et dolore magna aliqua. Nulla facilisi nullam vehicula 
+--------------------
+consumer1: -1411033344 [!] Text: 
+-------------------
+ ipsum a arcu cursus vitae. Donec et odio pellentesque diam volutpat commodo. In pellentesque massa
+--------------------
+producer1 -1394247936 [!] Text has been added! 
+
+producer2 -1402640640 [!] Text has been added! 
+
+consumer1: -1411033344 [!] Text: 
+-------------------
+ placerat duis ultricies lacus sed. Enim nec dui nunc mattis enim. Id consectetur purus
+--------------------
+consumer2: -1419426048 [!] Text: 
+-------------------
+ ut faucibus pulvinar elementum integer. Pharetra pharetra massa massa ultricies.
+--------------------
+producer1 -1394247936 [!] Text has been added! 
+
+producer2 -1402640640 [!] Text has been added! 
+
+consumer1: -1411033344 [!] Text: 
+-------------------
+ Pretium quam vulputate dignissim suspendisse in est ante. Sapien nec sagittis
+--------------------
+consumer1: -1411033344 [!] Text: 
+-------------------
+ aliquam malesuada bibendum. Quis hendrerit dolor magna eget est lorem ipsum. Amet cursus sit amet dictum sit.
+--------------------
+producer1 -1394247936 [!] Text has been added! 
+
+producer2 -1402640640 [!] Text has been added! 
+
+consumer1: -1411033344 [!] Text: 
+-------------------
+ Leo integer malesuada nunc vel risus commodo. Arcu non odio euismod lacinia. 
+--------------------
+consumer1: -1411033344 [!] Text: 
+-------------------
+ Orci ac auctor augue mauris. Eu non diam phasellus vestibulum lorem. Nibh tortor id aliquet lectus proin nibh.
+--------------------
+producer2 -1402640640 [!] Text has been added! 
+
+consumer1: -1411033344 [!] Text: 
+-------------------
+ Proin fermentum leo vel orci porta non pulvinar neque. Molestie nunc non blandit massa enim nec dui nunc mattis. 
+--------------------
+producer1 -1394247936 [!] Text has been added! 
+
+consumer2: -1419426048 [!] Text: 
+-------------------
+ Habitant morbi tristique senectus et. Mattis rhoncus urna neque viverra justo nec. Ultricies integer quis auctor
+--------------------
+producer1 -1394247936 [!] Text has been added! 
+
+consumer2: -1419426048 [!] Text: 
+-------------------
+ elit sed vulputate mi sit. Justo eget magna fermentum iaculis.
+\end{lstlisting}
+
+\newpage
+\section{Продовження розминки для тих, хто шукає пригод. Взаємне блокування}
+Модифікуйте програму п. 1 так, щоби викликати взаємне блокування.
+Для цього поміняйте місцями семафори. Переконайтесь у факті взаємного
+блокування і отримайте задоволення. C++
+
+\subsection{Input file}
+
+Такий самий (Див \ref{inputdata})
+\subsection{Code}
+\begin{lstlisting}[language=C++]
+#include <stdlib.h>
+#include <stdio.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <queue>
+#include <semaphore.h>
+#include <time.h>
+using std::queue;
+
+queue<char*> q;
+const int max_size = 5;
+FILE * file;
+int done = 0;
+
+sem_t lock;
+sem_t full;
+sem_t empty;
+
+void * produce(void * param)
+{
+	char * text;
+	while(!done)
+	{
+		sem_wait(&lock);
+		sem_wait(&empty);
+		text = (char*)malloc(255 * sizeof(char));
+		if (fgets(text, 256, file) != NULL)
+		{
+			q.push(text);
+			printf("%s %d [!] Text has been added! \n\n", (char*)param, pthread_self());
+		}
+		else
+		{
+			done = 1;
+		}
+		sem_post(&lock);
+		sem_post(&full);
+		sleep(rand() % 4); // random sleep;
+	}
+	return NULL;
+
+}
+
+void * consume(void * param)
+{
+	while(!done || !q.empty()) // when both conditions is False exit the loop;
+	{
+		sem_wait(&lock);
+		sem_wait(&full);
+		if(!q.empty())
+		{
+			printf("%s: %d [!] Text: \n----------------------------------\n %s-------------------------------------\n",(char*)param , pthread_self(), q.front());
+			q.pop();
+		}
+		sem_post(&lock);
+		sem_post(&empty);
+		sleep(rand() % 4); // random sleep;
+	}
+	return NULL;
+}
+
+int main(int argv, char * argc[])
+{
+	srand(time(0));
+
+	sem_init(&lock, 0, 1);
+	sem_init(&full, 0, 0);
+	sem_init(&empty,0, max_size);
+	file = fopen("lorem_ipsum.txt", "r");
+
+	pthread_t cons1, cons2;
+	pthread_t prod1, prod2;
+	
+	pthread_create(&prod1, NULL, produce, (void*)"producer1");
+	pthread_create(&prod2, NULL, produce, (void*)"producer2");
+	pthread_create(&cons1, NULL, consume, (void*)"consumer1");
+	pthread_create(&cons2, NULL, consume, (void*)"consumer2");
+
+	pthread_join(prod1, NULL);
+	pthread_join(prod2, NULL);
+	pthread_join(cons1, NULL);
+	pthread_join(cons2, NULL);
+	
+	return 0;
+}
+\end{lstlisting}
+
+\subsection{Program output}
+\begin{lstlisting}[]
+producer1 457340672 [!] Text has been added! 
+
+producer2 448947968 [!] Text has been added! 
+
+consumer1: 335542016 [!] Text: 
+----------------------------------
+ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod 
+-------------------------------------
+consumer2: 440555264 [!] Text: 
+----------------------------------
+ tempor incididunt ut labore et dolore magna aliqua. Nulla facilisi nullam vehicula 
+-------------------------------------
+
+// Programm stucks
+
+\end{lstlisting}
+
+
+\section{Індивідуальне завдання. Варіант 1.}
 \subsection{Code}
 \begin{lstlisting}[language=C++]
 #include <iostream>
@@ -148,7 +624,6 @@ void get_on_board(thread_info * info)
 
     printf("< Current Time: %d \n", time(0));
     handled_soldiers++;
-    sleep(1);
     sem_post(&boarding);
 }
 
@@ -217,7 +692,7 @@ int main(int argv, char * argc[])
     pthread_t * marine = new pthread_t[max_places];
     pthread_t * paratrooper = new pthread_t[max_places];
 
-    int counter = 0;
+    int counter = 1;
     thread_info * info;
     for(int i = 0; i < max_places; i++)
     {
@@ -259,9 +734,9 @@ int main(int argv, char * argc[])
 \end{lstlisting}
 
 \newpage
-\subsection*{Output}
+\subsection{Program Output}
 \subsubsection*{N = 2}
-\begin{lstlisting}[language=BASH]
+\begin{lstlisting}[]
 Enter N: 2
 
      INFORMATION
@@ -291,13 +766,122 @@ Eject all troops on coast
       Marine 0 disembarked. < Current time: 1588159563
       Marine 2 disembarked. < Current time: 1588159564
 \end{lstlisting}
-
+\newpage
 \subsubsection*{N = 3}
-\begin{lstlisting}[language=BASH]
-\end{lstlisting}
+\begin{lstlisting}[]
+Enter N: 3
 
+     INFORMATION
+Available places: 6
+    Paratroopers: 6
+          Marins: 6
+        ------------
+      Marine 2 boarded  < Current Time: 1588247530 
+      Marine 4 boarded  < Current Time: 1588247530 
+ Paratrooper 4 boarded  < Current Time: 1588247530 
+      Marine 5 boarded  < Current Time: 1588247530 
+ Paratrooper 6 boarded  < Current Time: 1588247530 
+ Paratrooper 1 boarded  < Current Time: 1588247531 
+      Marine 3 canceled < Current Time: 1588247531 
+ Paratrooper 3 canceled < Current Time: 1588247531 
+      Marine 6 canceled < Current Time: 1588247531 
+      Marine 1 canceled < Current Time: 1588247532 
+ Paratrooper 2 canceled < Current Time: 1588247532 
+ Paratrooper 5 canceled < Current Time: 1588247532 
+
+Cleaning all threads troops that are not in ferry
+
+  Ferry in trip!
+  Ferry in trip!
+  Ferry in trip!
+
+Eject all troops on coast
+
+      Marine 2 disembarked. < Current time: 1588247535
+      Marine 4 disembarked. < Current time: 1588247536
+ Paratrooper 4 disembarked. < Current time: 1588247537
+      Marine 5 disembarked. < Current time: 1588247538
+ Paratrooper 6 disembarked. < Current time: 1588247539
+ Paratrooper 1 disembarked. < Current time: 1588247540
+\end{lstlisting}
+\begin{lstlisting}[]
+Enter N: 3
+
+     INFORMATION
+Available places: 6
+    Paratroopers: 6
+          Marins: 6
+        ------------
+      Marine 3 boarded  < Current Time: 1588247916 
+      Marine 4 boarded  < Current Time: 1588247916 
+      Marine 1 boarded  < Current Time: 1588247917 
+      Marine 2 boarded  < Current Time: 1588247917 
+ Paratrooper 3 canceled < Current Time: 1588247917 
+      Marine 5 boarded  < Current Time: 1588247917 
+ Paratrooper 4 canceled < Current Time: 1588247918 
+ Paratrooper 5 canceled < Current Time: 1588247918 
+      Marine 6 boarded  < Current Time: 1588247918 
+ Paratrooper 1 canceled < Current Time: 1588247919 
+ Paratrooper 2 canceled < Current Time: 1588247919 
+ Paratrooper 6 canceled < Current Time: 1588247919 
+
+Cleaning all threads troops that are not in ferry
+
+  Ferry in trip!
+  Ferry in trip!
+  Ferry in trip!
+
+Eject all troops on coast
+
+      Marine 3 disembarked. < Current time: 1588247922
+      Marine 4 disembarked. < Current time: 1588247923
+      Marine 1 disembarked. < Current time: 1588247924
+      Marine 2 disembarked. < Current time: 1588247925
+      Marine 5 disembarked. < Current time: 1588247926
+      Marine 6 disembarked. < Current time: 1588247927
+
+
+\end{lstlisting}
+\begin{lstlisting}[]
+Enter N: 3
+
+     INFORMATION
+Available places: 6
+    Paratroopers: 6
+          Marins: 6
+        ------------
+ Paratrooper 1 boarded  < Current Time: 1588248044 
+ Paratrooper 2 boarded  < Current Time: 1588248044 
+ Paratrooper 3 boarded  < Current Time: 1588248044 
+ Paratrooper 4 boarded  < Current Time: 1588248044 
+ Paratrooper 5 boarded  < Current Time: 1588248044 
+      Marine 2 canceled < Current Time: 1588248046 
+      Marine 3 canceled < Current Time: 1588248046 
+      Marine 5 canceled < Current Time: 1588248046 
+      Marine 6 canceled < Current Time: 1588248046 
+ Paratrooper 6 boarded  < Current Time: 1588248046 
+      Marine 1 canceled < Current Time: 1588248047 
+      Marine 4 canceled < Current Time: 1588248047 
+
+Cleaning all threads troops that are not in ferry
+
+  Ferry in trip!
+  Ferry in trip!
+  Ferry in trip!
+
+Eject all troops on coast
+
+ Paratrooper 1 disembarked. < Current time: 1588248050
+ Paratrooper 2 disembarked. < Current time: 1588248051
+ Paratrooper 3 disembarked. < Current time: 1588248052
+ Paratrooper 4 disembarked. < Current time: 1588248053
+ Paratrooper 5 disembarked. < Current time: 1588248054
+ Paratrooper 6 disembarked. < Current time: 1588248055
+
+\end{lstlisting}
+\newpage
 \subsubsection*{N = 5}
-\begin{lstlisting}[language=BASH]
+\begin{lstlisting}[]
 Enter N: 5
 
      INFORMATION
@@ -344,11 +928,215 @@ Eject all troops on coast
  Paratrooper 0 disembarked. < Current time: 1588159832
  Paratrooper 2 disembarked. < Current time: 1588159833
       Marine 3 disembarked. < Current time: 1588159834
+\end{lstlisting}
+\newpage
+\subsubsection*{N = 7}
+\begin{lstlisting}[]
+Enter N: 7
+
+     INFORMATION
+Available places: 14
+    Paratroopers: 14
+          Marins: 14
+        ------------
+      Marine 4 boarded  < Current Time: 1588247664 
+ Paratrooper 5 boarded  < Current Time: 1588247664 
+ Paratrooper 6 boarded  < Current Time: 1588247664 
+ Paratrooper 7 boarded  < Current Time: 1588247664 
+      Marine 8 boarded  < Current Time: 1588247664 
+ Paratrooper 8 boarded  < Current Time: 1588247664 
+ Paratrooper 9 boarded  < Current Time: 1588247664 
+ Paratrooper 12 boarded  < Current Time: 1588247664 
+      Marine 13 boarded  < Current Time: 1588247664 
+      Marine 14 boarded  < Current Time: 1588247664 
+ Paratrooper 14 boarded  < Current Time: 1588247664 
+      Marine 1 boarded  < Current Time: 1588247665 
+ Paratrooper 2 canceled < Current Time: 1588247665 
+      Marine 3 boarded  < Current Time: 1588247665 
+ Paratrooper 4 canceled < Current Time: 1588247665 
+      Marine 5 boarded  < Current Time: 1588247665 
+      Marine 7 canceled < Current Time: 1588247665 
+ Paratrooper 10 canceled < Current Time: 1588247665 
+      Marine 11 canceled < Current Time: 1588247665 
+ Paratrooper 11 canceled < Current Time: 1588247665 
+ Paratrooper 1 canceled < Current Time: 1588247666 
+      Marine 2 canceled < Current Time: 1588247666 
+ Paratrooper 3 canceled < Current Time: 1588247666 
+      Marine 6 canceled < Current Time: 1588247666 
+      Marine 9 canceled < Current Time: 1588247666 
+      Marine 10 canceled < Current Time: 1588247666 
+      Marine 12 canceled < Current Time: 1588247666 
+ Paratrooper 13 canceled < Current Time: 1588247666 
+
+Cleaning all threads troops that are not in ferry
+
+  Ferry in trip!
+  Ferry in trip!
+  Ferry in trip!
+
+Eject all troops on coast
+
+      Marine 4 disembarked. < Current time: 1588247669
+ Paratrooper 5 disembarked. < Current time: 1588247670
+ Paratrooper 6 disembarked. < Current time: 1588247671
+ Paratrooper 7 disembarked. < Current time: 1588247672
+      Marine 8 disembarked. < Current time: 1588247673
+ Paratrooper 8 disembarked. < Current time: 1588247674
+ Paratrooper 9 disembarked. < Current time: 1588247675
+ Paratrooper 12 disembarked. < Current time: 1588247676
+      Marine 13 disembarked. < Current time: 1588247677
+      Marine 14 disembarked. < Current time: 1588247678
+ Paratrooper 14 disembarked. < Current time: 1588247679
+      Marine 1 disembarked. < Current time: 1588247680
+      Marine 3 disembarked. < Current time: 1588247681
+      Marine 5 disembarked. < Current time: 1588247682
+\end{lstlisting}
+\newpage
+\subsubsection*{N = 20}
+\begin{lstlisting}[]
+Enter N: 20
+
+     INFORMATION
+Available places: 40
+    Paratroopers: 40
+          Marins: 40
+        ------------
+      Marine 1 boarded  < Current Time: 1588247722 
+      Marine 2 boarded  < Current Time: 1588247722 
+ Paratrooper 2 boarded  < Current Time: 1588247722 
+      Marine 3 boarded  < Current Time: 1588247722 
+ Paratrooper 4 boarded  < Current Time: 1588247722 
+      Marine 5 boarded  < Current Time: 1588247722 
+      Marine 6 boarded  < Current Time: 1588247722 
+      Marine 7 boarded  < Current Time: 1588247722 
+      Marine 8 boarded  < Current Time: 1588247722 
+      Marine 9 boarded  < Current Time: 1588247722 
+      Marine 10 boarded  < Current Time: 1588247722 
+ Paratrooper 11 boarded  < Current Time: 1588247722 
+ Paratrooper 13 boarded  < Current Time: 1588247722 
+      Marine 15 boarded  < Current Time: 1588247722 
+      Marine 16 boarded  < Current Time: 1588247722 
+ Paratrooper 16 boarded  < Current Time: 1588247722 
+ Paratrooper 17 boarded  < Current Time: 1588247722 
+      Marine 18 boarded  < Current Time: 1588247722 
+      Marine 19 boarded  < Current Time: 1588247722 
+      Marine 20 boarded  < Current Time: 1588247722 
+      Marine 21 boarded  < Current Time: 1588247722 
+      Marine 24 boarded  < Current Time: 1588247722 
+ Paratrooper 24 boarded  < Current Time: 1588247722 
+      Marine 26 boarded  < Current Time: 1588247722 
+ Paratrooper 26 boarded  < Current Time: 1588247722 
+ Paratrooper 27 boarded  < Current Time: 1588247722 
+ Paratrooper 29 boarded  < Current Time: 1588247722 
+      Marine 30 boarded  < Current Time: 1588247722 
+      Marine 31 boarded  < Current Time: 1588247722 
+ Paratrooper 31 boarded  < Current Time: 1588247722 
+      Marine 34 boarded  < Current Time: 1588247722 
+ Paratrooper 34 boarded  < Current Time: 1588247722 
+ Paratrooper 35 boarded  < Current Time: 1588247722 
+ Paratrooper 36 boarded  < Current Time: 1588247722 
+ Paratrooper 37 boarded  < Current Time: 1588247722 
+      Marine 38 canceled < Current Time: 1588247722 
+ Paratrooper 39 boarded  < Current Time: 1588247722 
+ Paratrooper 40 boarded  < Current Time: 1588247722 
+      Marine 4 canceled < Current Time: 1588247723 
+ Paratrooper 5 boarded  < Current Time: 1588247723 
+ Paratrooper 7 boarded  < Current Time: 1588247723 
+ Paratrooper 8 boarded  < Current Time: 1588247723 
+ Paratrooper 12 canceled < Current Time: 1588247723 
+      Marine 14 canceled < Current Time: 1588247723 
+ Paratrooper 14 canceled < Current Time: 1588247723 
+ Paratrooper 20 canceled < Current Time: 1588247723 
+ Paratrooper 21 canceled < Current Time: 1588247723 
+      Marine 22 canceled < Current Time: 1588247723 
+ Paratrooper 23 canceled < Current Time: 1588247723 
+      Marine 25 canceled < Current Time: 1588247723 
+ Paratrooper 25 canceled < Current Time: 1588247723 
+      Marine 32 canceled < Current Time: 1588247723 
+      Marine 33 canceled < Current Time: 1588247723 
+ Paratrooper 33 canceled < Current Time: 1588247723 
+      Marine 35 canceled < Current Time: 1588247723 
+      Marine 36 canceled < Current Time: 1588247723 
+ Paratrooper 1 canceled < Current Time: 1588247724 
+ Paratrooper 3 canceled < Current Time: 1588247724 
+ Paratrooper 6 canceled < Current Time: 1588247724 
+ Paratrooper 9 canceled < Current Time: 1588247724 
+ Paratrooper 10 canceled < Current Time: 1588247724 
+      Marine 11 canceled < Current Time: 1588247724 
+      Marine 12 canceled < Current Time: 1588247724 
+      Marine 13 canceled < Current Time: 1588247724 
+ Paratrooper 15 canceled < Current Time: 1588247724 
+      Marine 17 canceled < Current Time: 1588247724 
+ Paratrooper 18 canceled < Current Time: 1588247724 
+ Paratrooper 19 canceled < Current Time: 1588247724 
+ Paratrooper 22 canceled < Current Time: 1588247724 
+      Marine 23 canceled < Current Time: 1588247724 
+      Marine 27 canceled < Current Time: 1588247724 
+      Marine 28 canceled < Current Time: 1588247724 
+ Paratrooper 28 canceled < Current Time: 1588247724 
+      Marine 29 canceled < Current Time: 1588247724 
+ Paratrooper 30 canceled < Current Time: 1588247724 
+ Paratrooper 32 canceled < Current Time: 1588247724 
+      Marine 37 canceled < Current Time: 1588247724 
+ Paratrooper 38 canceled < Current Time: 1588247724 
+      Marine 39 canceled < Current Time: 1588247724 
+      Marine 40 canceled < Current Time: 1588247724 
+
+Cleaning all threads troops that are not in ferry
+
+  Ferry in trip!
+  Ferry in trip!
+  Ferry in trip!
+
+Eject all troops on coast
+
+      Marine 1 disembarked. < Current time: 1588247727
+      Marine 2 disembarked. < Current time: 1588247728
+ Paratrooper 2 disembarked. < Current time: 1588247729
+      Marine 3 disembarked. < Current time: 1588247730
+ Paratrooper 4 disembarked. < Current time: 1588247731
+      Marine 5 disembarked. < Current time: 1588247732
+      Marine 6 disembarked. < Current time: 1588247733
+      Marine 7 disembarked. < Current time: 1588247734
+      Marine 8 disembarked. < Current time: 1588247735
+      Marine 9 disembarked. < Current time: 1588247736
+      Marine 10 disembarked. < Current time: 1588247737
+ Paratrooper 11 disembarked. < Current time: 1588247738
+ Paratrooper 13 disembarked. < Current time: 1588247739
+      Marine 15 disembarked. < Current time: 1588247740
+      Marine 16 disembarked. < Current time: 1588247741
+ Paratrooper 16 disembarked. < Current time: 1588247742
+ Paratrooper 17 disembarked. < Current time: 1588247743
+      Marine 18 disembarked. < Current time: 1588247744
+      Marine 19 disembarked. < Current time: 1588247745
+      Marine 20 disembarked. < Current time: 1588247746
+      Marine 21 disembarked. < Current time: 1588247747
+      Marine 24 disembarked. < Current time: 1588247748
+ Paratrooper 24 disembarked. < Current time: 1588247749
+      Marine 26 disembarked. < Current time: 1588247750
+ Paratrooper 26 disembarked. < Current time: 1588247751
+ Paratrooper 27 disembarked. < Current time: 1588247752
+ Paratrooper 29 disembarked. < Current time: 1588247753
+      Marine 30 disembarked. < Current time: 1588247754
+      Marine 31 disembarked. < Current time: 1588247755
+ Paratrooper 31 disembarked. < Current time: 1588247756
+      Marine 34 disembarked. < Current time: 1588247757
+ Paratrooper 34 disembarked. < Current time: 1588247758
+ Paratrooper 35 disembarked. < Current time: 1588247759
+ Paratrooper 36 disembarked. < Current time: 1588247760
+ Paratrooper 37 disembarked. < Current time: 1588247761
+ Paratrooper 39 disembarked. < Current time: 1588247762
+ Paratrooper 40 disembarked. < Current time: 1588247763
+ Paratrooper 5 disembarked. < Current time: 1588247764
+ Paratrooper 7 disembarked. < Current time: 1588247765
+ Paratrooper 8 disembarked. < Current time: 1588247766
 
 \end{lstlisting}
-\begin{lstlisting}[language=BASH]
-\end{lstlisting}
-\begin{lstlisting}[language=BASH]
-\end{lstlisting}
+
+\newpage
+\section{Висновки}
+\large
+Впродовж виконання цієї лабораторної роботи я дізнався: як створювати багатопотокові программи, блокувати потоки, коли це потрібно за допомогою семафорів, мютексів. Розглянув такий варіант семафору як locker. Передавати в потоки дані. Найбільш зручно використовувати структури для передачі даних у потоки.
+
 
 \end{document}
