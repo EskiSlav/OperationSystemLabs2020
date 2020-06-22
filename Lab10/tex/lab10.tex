@@ -1,0 +1,234 @@
+\documentclass{article}
+
+\usepackage{fancyhdr}
+\usepackage{cmap}
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english,russian,ukrainian]{babel}
+\usepackage{indentfirst}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{geometry}
+
+\hypersetup{
+	colorlinks,
+	citecolor=black,
+	linkcolor=black,
+	filecolor=black,
+	urlcolor=black
+}
+
+\geometry{
+	a4paper,
+	total={165mm,247mm},
+	left=20mm,
+	top=30mm,
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.5pt}
+%\renewcommand{\footrulewidth}{0.1pt}
+\rhead{\LaTeX}
+\lhead{Вячеслав Козачок}
+
+\cfoot{\thepage}
+%\titleformat{\section}
+%{\normalfont\Large\bfseries}{\thesection}{1em}{}
+
+%\titleformat*{\subsection}{\large\bfseries}
+
+ \usepackage{listings}
+ \usepackage{xcolor}
+ 
+ \definecolor{codegreen}{rgb}{0,0.6,0}
+ \definecolor{codegray}{rgb}{0.5,0.5,0.5}
+ \definecolor{codepurple}{rgb}{0.58,0,0.82}
+ \definecolor{backcolour}{rgb}{0.99,0.99,0.99}
+ \definecolor{codeblue}{rgb}{0.1,0.1,0.99}
+ 
+ \lstdefinestyle{mystyle}{
+ 	backgroundcolor=\color{backcolour},   
+ 	commentstyle=\color{codegreen},
+ 	keywordstyle=\color{codeblue},
+ 	numberstyle=\tiny\color{codegray},
+ 	stringstyle=\color{codepurple},
+ 	basicstyle=\ttfamily\footnotesize,
+ 	breakatwhitespace=false,         
+ 	breaklines=true,                 
+ 	captionpos=b,                    
+ 	keepspaces=true,                 
+ 	numbers=left,                    
+ 	numbersep=5pt,                  
+ 	showspaces=false,                
+ 	showstringspaces=false,
+ 	showtabs=false,                  
+ 	tabsize=4
+ }
+ 
+ \lstset{style=mystyle}
+ \newcommand{\nitem}{\item \vspace{-2mm}}
+ 
+\begin{document}
+ \include{title}
+\large
+\section*{Варіант 9}
+
+Нехай процес, який відкрив N файлів, перед породженням процесу-нащадка за допомогою системного виклику \texttt{fork()} закриває K<N файлів.
+Процес-нащадок відразу після породження закриває M<N-K файлів і через
+деякий час завершується (в цей час процес-предок очікує його завершення).
+Розробити програму, яка демонструвала б динаміку зміни даних в системі
+керування введенням-виведенням ОС Linux (таблиці відкритих файлів і
+масиви файлових дескрипторів процесів). Наприклад, сценарій програми
+може бути таким:
+
+\begin{enumerate}
+\nitem відкриття процесом-предком стандартних файлів введення-виведення і
+чотирьох призначених для користувача файлів для зчитування;
+\nitem закриття процесом-предком двох призначених для користувача файлів;
+\nitem процес-предок породжує процес, який успадковує таблиці файлів і
+відкритих файлів процесу-предка;
+\nitem завершується процес-нащадок.
+Після кожного з етапів друкуються таблиці відкритих файлів і масиви
+файлових дескрипторів для обох процесів.
+\end{enumerate}
+
+\section*{Code}
+\begin{lstlisting}[language=C++]
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <fcntl.h>
+
+#define FILES 8
+
+int * fd = new int[FILES];
+
+
+void print_descriptors(int * fd, int print_offset=1)
+{
+    for(int i = 0; i < print_offset; i++) printf(" ");
+
+    int opened_files = 0;
+    for(int i = 0; i < FILES; i++)
+    {
+        struct stat buff;
+        if (fstat(fd[i], &buff) == -1)
+            continue;
+        else
+        {
+            opened_files++;
+            printf("%d ", fd[i]);
+        }
+    }
+    printf("\n");
+    for(int i = 0; i < print_offset; i++) printf(" ");
+    printf("Total opened files:%d\n\n", opened_files);
+}
+
+int main() {
+    // Array of file descriptors
+    fd[0] = open("/dev/stdin", O_RDWR); 
+    fd[1] = open("/dev/stdout", O_RDWR); 
+    fd[2] = open("/dev/stderr", O_RDWR); 
+    fd[3] = open("./files/dum.txt", O_RDWR); 
+    fd[4] = open("./files/rob.txt", O_RDWR); 
+    fd[5] = open("./files/ann.txt", O_RDWR); 
+    fd[6] = open("./files/kate.txt", O_RDWR); 
+    fd[7] = open("./files/file.txt", O_RDWR); 
+    
+
+    printf(" - PID:%d All opened descriptors:\n", getpid());
+    print_descriptors(fd);
+
+    printf(" - PID:%d Closing some descriptors ... \n", getpid());
+    close(fd[2]);
+    close(fd[3]);
+
+
+    printf(" - PID:%d Show descriptors again:\n", getpid());
+    print_descriptors(fd);
+
+    printf(" - PID:%d Creating Child Process...\n", getpid());
+    pid_t pID = fork();
+
+    switch(pID)
+    {
+        case 0:
+            // Child process section
+            printf(" - - PID:%d Child process showing descriptors...\n", getpid());
+            print_descriptors(fd, 5);  
+
+            printf(" - - PID:%d Child process closing some descriptors...\n", getpid());
+            close(fd[6]);
+            close(fd[5]);
+
+            printf(" - - PID:%d Show descriptors in child process after closing:\n",
+             getpid());
+            print_descriptors(fd, 5);
+
+            printf(" - - PID:%d Child process EXITING...\n", getpid());
+            break;
+
+        case -1:
+            // Error Section
+            printf("Something bad happened when creating process\n");
+            perror("fork");
+            break;
+
+        default:
+            // Parent process section
+            wait(&pID);
+            printf(" - PID:%d Parent process waited for child and now prints descriptors again\n", getpid());
+            print_descriptors(fd);
+            printf(" - PID:%d Parent process EXITING...\n", getpid());
+            break;
+    }
+    
+
+}
+\end{lstlisting}
+\newpage
+\section*{Output}
+\begin{lstlisting}[language=BASH]
+ - PID:43563 All opened descriptors:
+ 3 4 5 6 7 8 9 10 
+ Total opened files:8
+
+ - PID:43563 Closing some descriptors ... 
+ - PID:43563 Show descriptors again:
+ 3 4 7 8 9 10 
+ Total opened files:6
+
+ - PID:43563 Creating Child Process...
+ - - PID:43564 Child process showing descriptors...
+     3 4 7 8 9 10 
+     Total opened files:6
+
+ - - PID:43564 Child process closing some descriptors...
+ - - PID:43564 Show descriptors in child process after closing:
+     3 4 7 10 
+     Total opened files:4
+
+ - - PID:43564 Child process EXITING...
+ - PID:43563 Parent process waited for child and now prints descriptors again
+ 3 4 7 8 9 10 
+ Total opened files:6
+
+ - PID:43563 Parent process EXITING...
+
+\end{lstlisting}
+\newpage
+\section*{Висновки}
+В цій лабораторній роботі навчився працювати з файловими дескрипторами. Відкривати їх, закривати дочірнім процессом, але як ми можемо бачити, коли ми закриваємо дочірнім процессом дескриптор, він залишається відкритим у батьківському. Так виходить тому що до дочірнього процесу потрапляють лише копії дискрипторів, і тому у батьківському вони залишаються.
+
+
+У функції \verb|print_descriptors| ми виводимо тільки відкриті дескриптори, адже якщо \verb|fstat()| повертає -1 то файл не відкритий і дескриптор є не дійсним і тому ми не виводимо дескриптор, а якщо 0, то ми можемо працювати з файлом, отже виводимо дескриптор. Це і реалізовано у функції.
+
+
+\end{document}
